@@ -8,6 +8,7 @@ data class User(
     val email: String,
     val full_name: String,
     val bio: String? = null,
+    val role: String = "Penulis",
     val profile_photo: String? = null
 )
 
@@ -21,7 +22,8 @@ data class UserDetailResponse(
 @Serializable
 data class UpdateUserRequest(
     val full_name: String,
-    val bio: String,
+    val bio: String? = null,
     val email: String,
-    val password: String
+    val password: String? = null,
+    val profile_photo: String? = null
 )

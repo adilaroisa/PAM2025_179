@@ -1,5 +1,8 @@
 package com.example.grandchroniclerapp.viewmodel.profile
 
+import android.content.Context
+import android.net.Uri
+import android.util.Base64
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -16,7 +19,7 @@ sealed interface EditProfileUiState {
     object Idle : EditProfileUiState
     object Loading : EditProfileUiState
     object Success : EditProfileUiState
-    object DeleteSuccess : EditProfileUiState // TAMBAHKAN INI
+    object DeleteSuccess : EditProfileUiState
     data class Error(val message: String) : EditProfileUiState
 }
 
@@ -28,10 +31,16 @@ class EditProfileViewModel(
     var uiState: EditProfileUiState by mutableStateOf(EditProfileUiState.Idle)
         private set
 
+    // Data Form
     var fullName by mutableStateOf("")
     var email by mutableStateOf("")
     var password by mutableStateOf("")
     var bio by mutableStateOf("")
+    var role by mutableStateOf("Penulis") // State untuk Role (SRS 1.a)
+
+    // Data Foto
+    var currentPhotoUrl by mutableStateOf("") // Nama file dari DB
+    var selectedImageUri by mutableStateOf<Uri?>(null) // Uri lokal dari galeri
 
     private var initialFullName = ""
     private var initialEmail = ""
@@ -51,6 +60,9 @@ class EditProfileViewModel(
                         fullName = response.data.full_name
                         email = response.data.email
                         bio = response.data.bio ?: ""
+                        role = response.data.role ?: "Penulis"
+                        currentPhotoUrl = response.data.profile_photo ?: ""
+
                         initialFullName = fullName
                         initialEmail = email
                         initialBio = bio
@@ -61,23 +73,54 @@ class EditProfileViewModel(
     }
 
     fun hasChanges(): Boolean {
-        return fullName != initialFullName || email != initialEmail || bio != initialBio || password.isNotEmpty()
+        return fullName != initialFullName ||
+                email != initialEmail ||
+                bio != initialBio ||
+                password.isNotEmpty() ||
+                selectedImageUri != null
     }
 
-    fun submitUpdate() {
+    // Fungsi konversi Uri ke Base64 (Untuk upload foto)
+    private fun uriToBase64(context: Context, uri: Uri): String? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val bytes = inputStream?.readBytes()
+            inputStream?.close()
+            if (bytes != null) Base64.encodeToString(bytes, Base64.NO_WRAP) else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    fun submitUpdate(context: Context) {
         if (fullName.isBlank() || email.isBlank()) {
             uiState = EditProfileUiState.Error("Nama dan Email tidak boleh kosong")
             return
         }
+
         viewModelScope.launch {
             uiState = EditProfileUiState.Loading
             try {
                 val loggedInId = userPreferences.getUserId.first()
                 if (loggedInId != -1) {
-                    val request = UpdateUserRequest(fullName, email, password, bio)
+
+                    // Konversi foto ke base64 jika user memilih foto baru
+                    val base64Image = selectedImageUri?.let { uriToBase64(context, it) }
+
+                    val request = UpdateUserRequest(
+                        full_name = fullName,
+                        email = email,
+                        password = if (password.isEmpty()) null else password,
+                        bio = bio,
+                        profile_photo = base64Image
+                    )
+
                     val response = repository.updateUser(loggedInId, request)
-                    if (response.status) uiState = EditProfileUiState.Success
-                    else uiState = EditProfileUiState.Error(response.message ?: "Gagal update")
+                    if (response.status) {
+                        uiState = EditProfileUiState.Success
+                    } else {
+                        uiState = EditProfileUiState.Error(response.message ?: "Gagal update")
+                    }
                 }
             } catch (e: IOException) {
                 uiState = EditProfileUiState.Error("Koneksi bermasalah")
@@ -87,23 +130,22 @@ class EditProfileViewModel(
         }
     }
 
-    // --- FUNGSI HAPUS AKUN BARU ---
     fun deleteAccount() {
         viewModelScope.launch {
             uiState = EditProfileUiState.Loading
             try {
                 val loggedInId = userPreferences.getUserId.first()
                 if (loggedInId != -1) {
-                    val response = repository.deleteUser(loggedInId) // Pastikan fungsi ini ada di repository
+                    val response = repository.deleteUser(loggedInId)
                     if (response.status) {
-                        userPreferences.saveUserId(-1) // Logout user secara lokal
+                        userPreferences.saveUserId(-1)
                         uiState = EditProfileUiState.DeleteSuccess
                     } else {
-                        uiState = EditProfileUiState.Error(response.message ?: "Gagal menghapus akun")
+                        uiState = EditProfileUiState.Error(response.message ?: "Gagal")
                     }
                 }
             } catch (e: Exception) {
-                uiState = EditProfileUiState.Error("Terjadi kesalahan: ${e.message}")
+                uiState = EditProfileUiState.Error("Terjadi kesalahan")
             }
         }
     }

@@ -1,23 +1,20 @@
 package com.example.grandchroniclerapp.uicontroller.view.profile
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,14 +22,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import com.example.grandchroniclerapp.R
 import com.example.grandchroniclerapp.ui.theme.PastelBluePrimary
 import com.example.grandchroniclerapp.ui.theme.PastelPinkSecondary
@@ -53,24 +52,27 @@ fun EditProfileScreen(
     val uiState = viewModel.uiState
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    // State Dialog & Visibility
+    // Launcher Galeri
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> viewModel.selectedImageUri = uri }
+    )
+
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showSaveConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    // --- FUNGSI VALIDASI ---
     fun isNameValid(name: String): Boolean = Regex("^[a-zA-Z0-9 ]*$").matches(name)
     fun isEmailValid(email: String): Boolean = email.contains("@")
 
-    // Fungsi Navigasi Aman
     fun onBackAttempt() {
         if (viewModel.hasChanges()) showDiscardDialog = true else navigateBack()
     }
     BackHandler { onBackAttempt() }
 
-    // Handle UI State
     LaunchedEffect(uiState) {
         when (uiState) {
             is EditProfileUiState.Success -> {
@@ -78,7 +80,6 @@ fun EditProfileScreen(
                 delay(1500)
                 navigateBack()
             }
-            // --- AKTIVASI LOGIKA HAPUS SUKSES ---
             is EditProfileUiState.DeleteSuccess -> {
                 scope.launch { snackbarHostState.showSnackbar("Akun Berhasil Dihapus") }
                 delay(1500)
@@ -96,15 +97,14 @@ fun EditProfileScreen(
         AlertDialog(
             onDismissRequest = { showDiscardDialog = false },
             icon = { Icon(Icons.Default.Warning, null, tint = SoftError) },
-            title = { Text("Batalkan?", color = SoftError, style = MaterialTheme.typography.titleLarge) },
+            title = { Text("Batalkan?", color = SoftError) },
             text = { Text("Perubahan belum disimpan. Yakin ingin keluar?") },
             confirmButton = {
                 Button(onClick = { showDiscardDialog = false; navigateBack() }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) {
                     Text("Keluar", color = Color.White)
                 }
             },
-            dismissButton = { OutlinedButton(onClick = { showDiscardDialog = false }) { Text("Batal") } },
-            containerColor = Color.White
+            dismissButton = { OutlinedButton(onClick = { showDiscardDialog = false }) { Text("Batal") } }
         )
     }
 
@@ -112,36 +112,31 @@ fun EditProfileScreen(
         AlertDialog(
             onDismissRequest = { showDeleteAccountDialog = false },
             icon = { Icon(Icons.Default.Delete, null, tint = SoftError) },
-            title = { Text("Hapus Akun Permanen?", color = SoftError, style = MaterialTheme.typography.titleLarge) },
-            text = { Text("Tindakan ini tidak dapat dibatalkan. Semua data artikel Anda akan ikut terhapus.") },
+            title = { Text("Hapus Akun Permanen?") },
+            text = { Text("Tindakan ini tidak dapat dibatalkan. Semua data Anda akan terhapus.") },
             confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteAccountDialog = false
-                        viewModel.deleteAccount() // MEMANGGIL FUNGSI HAPUS DI VIEWMODEL
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = SoftError)
-                ) {
+                Button(onClick = { showDeleteAccountDialog = false; viewModel.deleteAccount() }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) {
                     Text("Hapus Akun", color = Color.White)
                 }
             },
-            dismissButton = { OutlinedButton(onClick = { showDeleteAccountDialog = false }) { Text("Batal") } },
-            containerColor = Color.White
+            dismissButton = { OutlinedButton(onClick = { showDeleteAccountDialog = false }) { Text("Batal") } }
         )
     }
 
     if (showSaveConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showSaveConfirmDialog = false },
-            title = { Text("Simpan Profil?", style = MaterialTheme.typography.titleLarge) },
+            title = { Text("Simpan Profil?") },
             text = { Text("Yakin ingin memperbarui data profil Anda?") },
             confirmButton = {
-                Button(onClick = { showSaveConfirmDialog = false; viewModel.submitUpdate() }, colors = ButtonDefaults.buttonColors(containerColor = PastelBluePrimary)) {
+                Button(onClick = {
+                    showSaveConfirmDialog = false
+                    viewModel.submitUpdate(context)
+                }, colors = ButtonDefaults.buttonColors(containerColor = PastelBluePrimary)) {
                     Text("Ya, Simpan")
                 }
             },
-            dismissButton = { TextButton(onClick = { showSaveConfirmDialog = false }) { Text("Batal") } },
-            containerColor = Color.White
+            dismissButton = { TextButton(onClick = { showSaveConfirmDialog = false }) { Text("Batal") } }
         )
     }
 
@@ -159,46 +154,106 @@ fun EditProfileScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(24.dp)
-                        .verticalScroll(rememberScrollState())
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+
+                    // --- BAGIAN FOTO PROFIL ---
+                    Box(contentAlignment = Alignment.BottomEnd) {
+                        Box(
+                            modifier = Modifier
+                                .size(110.dp)
+                                .clip(CircleShape)
+                                .background(Color.LightGray.copy(alpha = 0.3f))
+                                .clickable {
+                                    photoPickerLauncher.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (viewModel.selectedImageUri != null) {
+                                AsyncImage(
+                                    model = viewModel.selectedImageUri,
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else if (viewModel.currentPhotoUrl.isNotEmpty()) {
+                                AsyncImage(
+                                    model = "http://10.0.2.2:3000/uploads/${viewModel.currentPhotoUrl}",
+                                    contentDescription = null,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(Icons.Default.Person, null, modifier = Modifier.size(60.dp), tint = Color.Gray)
+                            }
+                        }
+                        // Badge Kamera
+                        Surface(
+                            shape = CircleShape,
+                            color = PastelBluePrimary,
+                            modifier = Modifier.size(32.dp).padding(4.dp)
+                        ) {
+                            Icon(Icons.Default.CameraAlt, null, tint = Color.White, modifier = Modifier.padding(4.dp))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- STATUS AKUN (Sesuai SRS 1.a) ---
+                    OutlinedTextField(
+                        value = viewModel.role,
+                        onValueChange = {},
+                        label = { Text("Status Akun (Otomatis)") },
+                        leadingIcon = { Icon(Icons.Default.Badge, null) },
+                        modifier = Modifier.fillMaxWidth(),
+                        readOnly = true,
+                        enabled = false,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledTextColor = Color.Black,
+                            disabledBorderColor = PastelBluePrimary.copy(alpha = 0.5f),
+                            disabledLabelColor = Color.Gray
+                        )
+                    )
+
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Nama Lengkap
                     OutlinedTextField(
                         value = viewModel.fullName,
                         onValueChange = { viewModel.fullName = it },
-                        label = { Text(stringResource(R.string.full_name_label), style = MaterialTheme.typography.titleMedium) },
+                        label = { Text(stringResource(R.string.full_name_label)) },
                         leadingIcon = { Icon(Icons.Default.Person, null) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyLarge,
                         shape = RoundedCornerShape(12.dp)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Email
                     OutlinedTextField(
                         value = viewModel.email,
                         onValueChange = { viewModel.email = it },
-                        label = { Text(stringResource(R.string.email_label), style = MaterialTheme.typography.titleMedium) },
+                        label = { Text(stringResource(R.string.email_label)) },
                         leadingIcon = { Icon(Icons.Default.Email, null) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyLarge,
                         shape = RoundedCornerShape(12.dp)
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Password Baru
                     OutlinedTextField(
                         value = viewModel.password,
                         onValueChange = { viewModel.password = it },
-                        label = { Text("${stringResource(R.string.password_label)} Baru (Opsional)", style = MaterialTheme.typography.titleMedium) },
+                        label = { Text("Password Baru (Opsional)") },
                         leadingIcon = { Icon(Icons.Default.Lock, null) },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        textStyle = MaterialTheme.typography.bodyLarge,
                         shape = RoundedCornerShape(12.dp),
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -207,41 +262,29 @@ fun EditProfileScreen(
                         }
                     )
 
-                    Text(
-                        text = "*Minimal 8 karakter jika ingin mengganti password.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
-                    )
-
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Bio
                     OutlinedTextField(
                         value = viewModel.bio,
                         onValueChange = { viewModel.bio = it },
-                        label = { Text("Bio Singkat", style = MaterialTheme.typography.titleMedium) },
-                        modifier = Modifier.fillMaxWidth().height(150.dp),
-                        maxLines = 5,
-                        textStyle = MaterialTheme.typography.bodyLarge,
+                        label = { Text("Bio Singkat") },
+                        modifier = Modifier.fillMaxWidth().height(120.dp),
                         shape = RoundedCornerShape(12.dp)
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    // --- TOMBOL HAPUS AKUN ---
+                    // Hapus Akun
                     Divider(color = Color.LightGray.copy(alpha = 0.5f))
-                    Spacer(modifier = Modifier.height(16.dp))
-
                     TextButton(
                         onClick = { showDeleteAccountDialog = true },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.textButtonColors(contentColor = SoftError)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Hapus Akun Permanen", style = MaterialTheme.typography.labelLarge)
-                        }
+                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Hapus Akun Permanen")
                     }
 
                     Spacer(modifier = Modifier.height(100.dp))
@@ -249,6 +292,7 @@ fun EditProfileScreen(
             }
         }
 
+        // Header TopBar
         Row(
             modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -256,25 +300,17 @@ fun EditProfileScreen(
             IconButton(onClick = { onBackAttempt() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
             }
-            Spacer(Modifier.width(8.dp))
             Text("Edit Profil", style = MaterialTheme.typography.titleLarge, color = Color.White)
         }
 
+        // Floating Action Button (Simpan)
         Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.BottomEnd) {
             FloatingActionButton(
                 onClick = {
-                    val name = viewModel.fullName.trim()
-                    val email = viewModel.email.trim()
-                    val password = viewModel.password.trim()
-
-                    if (name.isBlank() || email.isBlank()) {
+                    if (viewModel.fullName.isBlank() || viewModel.email.isBlank()) {
                         scope.launch { snackbarHostState.showSnackbar("Nama dan Email wajib diisi") }
-                    } else if (!isNameValid(name)) {
-                        scope.launch { snackbarHostState.showSnackbar("Nama tidak boleh mengandung simbol") }
-                    } else if (!isEmailValid(email)) {
-                        scope.launch { snackbarHostState.showSnackbar("Format email salah (harus ada @)") }
-                    } else if (password.isNotEmpty() && password.length < 8) {
-                        scope.launch { snackbarHostState.showSnackbar("Password baru minimal 8 karakter") }
+                    } else if (viewModel.password.isNotEmpty() && viewModel.password.length < 8) {
+                        scope.launch { snackbarHostState.showSnackbar("Password minimal 8 karakter") }
                     } else {
                         showSaveConfirmDialog = true
                     }
@@ -288,22 +324,9 @@ fun EditProfileScreen(
             }
         }
 
+        // Snackbar
         Box(modifier = Modifier.fillMaxSize().padding(bottom = 20.dp), contentAlignment = Alignment.BottomCenter) {
-            SnackbarHost(hostState = snackbarHostState) { data ->
-                val isSuccess = data.visuals.message.contains("Berhasil", true)
-                if (isSuccess) {
-                    Box(modifier = Modifier.padding(16.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                        .background(Brush.horizontalGradient(listOf(PastelBluePrimary, PastelPinkSecondary))).padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CheckCircle, null, tint = Color.White)
-                            Spacer(Modifier.width(12.dp))
-                            Text(text = data.visuals.message, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyLarge)
-                        }
-                    }
-                } else {
-                    Snackbar(containerColor = SoftError, contentColor = Color.White, snackbarData = data)
-                }
-            }
+            SnackbarHost(hostState = snackbarHostState)
         }
     }
 }
