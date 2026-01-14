@@ -66,7 +66,9 @@ class EditArticleViewModel(
         viewModelScope.launch {
             try {
                 val res = repository.getCategories()
-                if (res.status) categories = res.data
+                if (res.status) {
+                    categories = res.data.filter { it.category_id != 7 }
+                }
             } catch (e: Exception) { }
         }
     }
@@ -85,7 +87,6 @@ class EditArticleViewModel(
                         ?: categories.find { it.category_name == article.category_name }
 
                     oldImages.clear()
-                    // Map gambar lama ke wrapper class. Asumsi index caption sesuai index image.
                     article.images.forEachIndexed { index, url ->
                         val cap = if (index < article.captions.size) article.captions[index] else ""
                         oldImages.add(ExistingImageState(url, cap))
@@ -137,8 +138,7 @@ class EditArticleViewModel(
     fun updateCategory(c: Category) { selectedCategory = c }
 
     fun hasChanges(): Boolean {
-        // Logika sederhana: anggap selalu ada perubahan jika user masuk edit mode
-        // Anda bisa memperluas logika ini jika mau strict
+        // anggap selalu ada perubahan jika user masuk edit mode
         return true
     }
 
@@ -166,8 +166,6 @@ class EditArticleViewModel(
             try {
                 val gson = Gson()
                 val deletedJson = if (deletedImageUrls.isNotEmpty()) gson.toJson(deletedImageUrls) else null
-
-                // GABUNGKAN CAPTION LAMA (yang tidak dihapus) DAN CAPTION BARU
                 val allCaptions = mutableListOf<String>()
                 oldImages.forEach { allCaptions.add(it.caption) }
                 newImages.forEach { allCaptions.add(it.caption) }

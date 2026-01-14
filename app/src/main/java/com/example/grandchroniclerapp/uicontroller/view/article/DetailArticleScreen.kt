@@ -1,7 +1,13 @@
 package com.example.grandchroniclerapp.uicontroller.view.article
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -16,11 +22,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,7 +34,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -75,72 +80,67 @@ fun DetailArticleScreen(
             }
             is DetailUiState.Success -> {
                 val article = uiState.article
+
+                var showCaption by remember { mutableStateOf(false) }
+
                 Column(
                     modifier = Modifier
                         .padding(innerPadding)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // --- 1. HEADER GAMBAR SLIDER (HYBRID HEIGHT) ---
+                    // --- 1. HEADER GAMBAR SLIDER ---
                     if (article.images.isNotEmpty()) {
                         val pagerState = rememberPagerState(pageCount = { article.images.size })
 
-                        // [LOGIKA BARU]: Tentukan tinggi gambar berdasarkan kategori
-                        // Jika ID = 2 (Tokoh Dunia), pakai Portrait (500.dp)
-                        // Selain itu pakai Landscape standard (300.dp)
                         val isTokohDunia = article.category_id == 2
                         val headerHeight = if (isTokohDunia) 500.dp else 300.dp
 
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(headerHeight) // Tinggi Dinamis diterapkan di sini
+                                .height(headerHeight)
                                 .background(Color.LightGray)
                         ) {
                             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    val rawUrl = article.images[page]
-                                    val fullUrl = if (rawUrl.startsWith("http")) rawUrl else "http://10.0.2.2:3000/uploads/$rawUrl"
+                                val rawUrl = article.images[page]
+                                val fullUrl = if (rawUrl.startsWith("http")) rawUrl else "http://10.0.2.2:3000/uploads/$rawUrl"
 
-                                    // Gambar Utama
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(LocalContext.current)
-                                            .data(fullUrl)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize(),
-                                        contentScale = ContentScale.Crop
+                                AsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(fullUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable { showCaption = !showCaption },
+                                    contentScale = ContentScale.Crop
+                                )
+                            }
+
+                            // --- LOGIKA TOMBOL INFO (i) atau caption ---
+                            val currentPageCaption = if (pagerState.currentPage < article.captions.size) article.captions[pagerState.currentPage] else ""
+
+                            if (currentPageCaption.isNotBlank()) {
+                                IconButton(
+                                    onClick = { showCaption = !showCaption },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomStart)
+                                        .padding(16.dp)
+                                        .size(32.dp)
+                                ) {
+                                    val iconTint = if (showCaption) Color(0xFFFFD700) else Color.White
+
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = "Info",
+                                        tint = iconTint,
+                                        modifier = Modifier.size(28.dp)
                                     )
-
-                                    // --- CAPTION KECIL & TRANSPARAN ---
-                                    // Ambil caption dengan aman (cek null/index)
-                                    val caption = if (page < article.captions.size) article.captions[page] else ""
-
-                                    if (caption.isNotBlank()) {
-                                        Box(
-                                            modifier = Modifier
-                                                .align(Alignment.BottomStart)
-                                                .padding(start = 16.dp, bottom = 16.dp, end = 80.dp) // Padding end besar agar tidak menabrak indikator
-                                                .background(
-                                                    color = Color.Black.copy(alpha = 0.6f),
-                                                    shape = RoundedCornerShape(8.dp)
-                                                )
-                                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                                        ) {
-                                            Text(
-                                                text = caption,
-                                                color = Color.White,
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontStyle = FontStyle.Italic,
-                                                maxLines = 2,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
                                 }
                             }
 
-                            // Navigasi Slider (Panah Kiri Kanan)
+                            // Navigasi Slider
                             if (article.images.size > 1) {
                                 if (pagerState.currentPage > 0) {
                                     IconButton(
@@ -154,7 +154,7 @@ fun DetailArticleScreen(
                                         modifier = Modifier.align(Alignment.CenterEnd).padding(8.dp).background(Color.Black.copy(0.3f), CircleShape)
                                     ) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color.White) }
                                 }
-                                // Indikator Halaman (Angka)
+                                // Indikator Halaman
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.BottomEnd)
@@ -166,6 +166,37 @@ fun DetailArticleScreen(
                                 }
                             }
                         }
+
+                        // --- CAPTION DI BAWAH FOTO ---
+                        val captionToShow = if (pagerState.currentPage < article.captions.size) article.captions[pagerState.currentPage] else ""
+
+                        // Tampilkan hanya jika ada isinya
+                        if (captionToShow.isNotBlank()) {
+                            AnimatedVisibility(
+                                visible = showCaption,
+                                enter = expandVertically() + fadeIn(),
+                                exit = shrinkVertically() + fadeOut()
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color(0xFFF5F7FA)) // Abu sangat muda
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                                ) {
+                                    Text(
+                                        text = captionToShow,
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                                        color = Color.Black
+                                    )
+                                }
+                            }
+                        } else {
+                            // Opsional: Jika user geser ke foto tanpa caption, otomatis tutup toggle-nya agar rapi
+                            LaunchedEffect(pagerState.currentPage) {
+                                showCaption = false
+                            }
+                        }
+
                     } else {
                         Box(modifier = Modifier.fillMaxWidth().height(200.dp).background(Color(0xFFEEEEEE)), contentAlignment = Alignment.Center) {
                             Text("Tidak ada gambar", color = Color.Gray)
@@ -174,15 +205,12 @@ fun DetailArticleScreen(
 
                     // --- 2. KONTEN UTAMA ---
                     Column(modifier = Modifier.padding(16.dp)) {
-                        // Kategori
                         Text(article.category_name ?: "Tanpa Kategori", color = PastelBluePrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
                         Spacer(Modifier.height(8.dp))
 
-                        // Judul
                         Text(article.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(16.dp))
 
-                        // Metadata
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Person, null, Modifier.size(16.dp), tint = Color.Gray)
                             Spacer(Modifier.width(4.dp))
@@ -197,11 +225,9 @@ fun DetailArticleScreen(
                             Text("${article.views_count} x Dilihat", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
 
-                        // --- 3. TAGS / HASHTAG ---
                         if (!article.tags.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(16.dp))
                             val tagList = article.tags.split(" ", "\n").filter { it.isNotBlank() }
-
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 items(tagList) { tag ->
                                     SuggestionChip(
@@ -219,10 +245,7 @@ fun DetailArticleScreen(
                         }
 
                         Divider(Modifier.padding(vertical = 20.dp))
-
-                        // Isi Artikel
                         Text(article.content, style = MaterialTheme.typography.bodyLarge, lineHeight = 28.sp)
-
                         Spacer(modifier = Modifier.height(50.dp))
                     }
                 }

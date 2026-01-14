@@ -170,7 +170,10 @@ fun HybridArticleCard(
                 val imgUrl = if (thumbnailImage.startsWith("http")) thumbnailImage else "http://10.0.2.2:3000/uploads/$thumbnailImage"
 
                 val imageModifier = if (isPinterestStyle) {
-                    Modifier.fillMaxWidth().wrapContentHeight()
+                    // --- PERBAIKAN DI SINI ---
+                    // Menggunakan heightIn agar tinggi maksimal dibatasi 220.dp
+                    // Jadi meskipun gambarnya panjang banget, dia akan dicrop rapi
+                    Modifier.fillMaxWidth().heightIn(min = 150.dp, max = 220.dp)
                 } else {
                     Modifier.fillMaxWidth().height(140.dp)
                 }
@@ -178,7 +181,7 @@ fun HybridArticleCard(
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current).data(imgUrl).crossfade(true).build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop,
+                    contentScale = ContentScale.Crop, // Crop agar gambar mengisi area yang sudah dibatasi
                     modifier = imageModifier
                 )
             } else {

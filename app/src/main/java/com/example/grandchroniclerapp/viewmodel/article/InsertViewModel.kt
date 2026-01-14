@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
-// Wrapper Class untuk Gambar + Caption
 data class ImageUploadState(
     val uri: Uri,
     var caption: String = ""
@@ -45,7 +44,6 @@ class InsertViewModel(
     var selectedCategory: Category? by mutableStateOf(null)
     var tags by mutableStateOf("")
 
-    // UBAH: Menggunakan List of ImageUploadState (Uri + Caption)
     var imageList = mutableStateListOf<ImageUploadState>()
         private set
 
@@ -60,7 +58,9 @@ class InsertViewModel(
         viewModelScope.launch {
             try {
                 val res = repository.getCategories()
-                if (res.status) categories = res.data
+                if (res.status) {
+                    categories = res.data.filter { it.category_id != 7 }
+                }
             } catch (e: Exception) { }
         }
     }
@@ -70,20 +70,16 @@ class InsertViewModel(
     fun updateCategory(c: Category) { selectedCategory = c }
     fun updateTags(t: String) { tags = t }
 
-    // Update fungsi Add Images
     fun addImages(uris: List<Uri>) {
         uris.forEach { uri ->
             imageList.add(ImageUploadState(uri))
         }
     }
 
-    // Update fungsi Remove Image
     fun removeImage(item: ImageUploadState) { imageList.remove(item) }
 
-    // Tambahan: Update Caption
     fun updateCaption(index: Int, text: String) {
         if (index in imageList.indices) {
-            // Perlu replace item agar Compose mendeteksi perubahan state pada properti var
             val item = imageList[index]
             imageList[index] = item.copy(caption = text)
         }
@@ -92,7 +88,6 @@ class InsertViewModel(
     fun hasUnsavedChanges(): Boolean = title.isNotEmpty() || content.isNotEmpty() || imageList.isNotEmpty()
 
     fun submitArticle(context: Context, status: String) {
-        // Validasi
         var errorMessage: String? = null
         if (title.isBlank()) errorMessage = "Judul wajib diisi!"
         else if (status == "Published") {
@@ -116,7 +111,6 @@ class InsertViewModel(
                     return@launch
                 }
 
-                // Pisahkan URI dan Caption untuk dikirim
                 val urisToSend = imageList.map { it.uri }
                 val captionsToSend = imageList.map { it.caption }
 
