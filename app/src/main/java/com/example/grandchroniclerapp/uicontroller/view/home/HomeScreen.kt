@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import coil.size.Size // Import Size untuk Coil
 import com.example.grandchroniclerapp.R
 import com.example.grandchroniclerapp.model.Article
 import com.example.grandchroniclerapp.ui.theme.PastelBluePrimary
@@ -42,17 +43,13 @@ fun HomeScreen(
     viewModel: HomeViewModel = viewModel(factory = PenyediaViewModel.Factory)
 ) {
     val uiState = viewModel.homeUiState
-
-    // GUNAKAN STATE KHUSUS STAGGERED GRID
     val gridState = rememberLazyStaggeredGridState()
 
-    // Logika Infinite Scroll (Load More)
     val isAtBottom by remember {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
             val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            // Load more jika item yang terlihat mendekati total item
             totalItems > 0 && lastVisibleItemIndex >= (totalItems - 4)
         }
     }
@@ -91,7 +88,6 @@ fun HomeScreen(
                                 Text("Belum ada kisah sejarah.", color = Color.Gray)
                             }
                         } else {
-                            // --- IMPLEMENTASI HYBRID STAGGERED GRID ---
                             LazyVerticalStaggeredGrid(
                                 state = gridState,
                                 columns = StaggeredGridCells.Fixed(2),
@@ -100,11 +96,9 @@ fun HomeScreen(
                                 verticalItemSpacing = 16.dp,
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                items(viewModel.articles) { article ->
+                                items(viewModel.articles, key = { it.article_id }) { article ->
+                                    // PENTING: Tambahkan key agar Compose bisa melacak item dengan benar dan mengurangi redraw yang aneh
 
-                                    // LOGIKA HYBRID:
-                                    // Jika Tokoh Dunia (ID 2) -> Pinterest Style (Tinggi Bebas)
-                                    // Lainnya -> Uniform Grid (Tinggi Tetap)
                                     val isTokohDunia = article.category_id == 2
 
                                     HybridArticleCard(
@@ -115,7 +109,6 @@ fun HomeScreen(
                                 }
 
                                 if (viewModel.isLoadingMore) {
-                                    // Span FullLine agar loading di tengah
                                     item(span = StaggeredGridItemSpan.FullLine) {
                                         Box(Modifier.fillMaxWidth().height(50.dp), contentAlignment = Alignment.Center) {
                                             CircularProgressIndicator(modifier = Modifier.size(24.dp), color = PastelBluePrimary)
@@ -129,7 +122,6 @@ fun HomeScreen(
             }
         }
 
-        // Header Judul
         Row(
             modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -148,16 +140,17 @@ fun HybridArticleCard(
 ) {
     val thumbnailImage = article.images.firstOrNull() ?: article.image
 
-    // 1. Logika Kartu (Hybrid)
+    // 1. Modifier Kartu
+    // Kalau Pinterest Style, kita biarkan tingginya mengikuti konten (wrapContentHeight)
+    // Kalau Normal, kita fix tinggi kartunya
     val sizeModifier = if (isPinterestStyle) {
         Modifier.fillMaxWidth().wrapContentHeight()
     } else {
         Modifier.fillMaxWidth().height(280.dp)
     }
 
-    // 2. Warna Badge Khusus Tokoh Dunia (Emas vs Pink Biasa)
-    val badgeColor = if (isPinterestStyle) Color(0xFFFFF9C4) else PastelPinkContainer // Kuning Emas Muda vs Pink
-    val badgeBorder = if (isPinterestStyle) BorderStroke(1.dp, Color(0xFFFBC02D)) else null // Border Emas
+    val badgeColor = if (isPinterestStyle) Color(0xFFFFF9C4) else PastelPinkContainer
+    val badgeBorder = if (isPinterestStyle) BorderStroke(1.dp, Color(0xFFFBC02D)) else null
 
     Card(
         modifier = sizeModifier.clickable { onClick() },
@@ -169,19 +162,27 @@ fun HybridArticleCard(
             if (thumbnailImage != null) {
                 val imgUrl = if (thumbnailImage.startsWith("http")) thumbnailImage else "http://10.0.2.2:3000/uploads/$thumbnailImage"
 
+                // 2. Modifier Gambar
                 val imageModifier = if (isPinterestStyle) {
-                    // --- PERBAIKAN DI SINI ---
-                    // Menggunakan heightIn agar tinggi maksimal dibatasi 220.dp
-                    // Jadi meskipun gambarnya panjang banget, dia akan dicrop rapi
-                    Modifier.fillMaxWidth().heightIn(min = 150.dp, max = 220.dp)
+                    Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight()
+                        .heightIn(min = 100.dp)
                 } else {
-                    Modifier.fillMaxWidth().height(140.dp)
+                    Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
                 }
 
+                val contentScale = if (isPinterestStyle) ContentScale.FillWidth else ContentScale.Crop
+
                 AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current).data(imgUrl).crossfade(true).build(),
+                    model = ImageRequest.Builder(LocalContext.current)
+                        .data(imgUrl)
+                        .crossfade(true)
+                        .build(),
                     contentDescription = null,
-                    contentScale = ContentScale.Crop, // Crop agar gambar mengisi area yang sudah dibatasi
+                    contentScale = contentScale,
                     modifier = imageModifier
                 )
             } else {
@@ -191,7 +192,6 @@ fun HybridArticleCard(
             }
 
             Column(modifier = Modifier.padding(12.dp)) {
-                // Badge Kategori
                 Surface(
                     color = badgeColor,
                     shape = RoundedCornerShape(6.dp),
