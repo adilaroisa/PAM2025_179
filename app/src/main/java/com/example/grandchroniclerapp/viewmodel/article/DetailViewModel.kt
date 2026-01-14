@@ -12,7 +12,7 @@ import com.example.grandchroniclerapp.uicontroller.navigation.DestinasiDetail
 import kotlinx.coroutines.launch
 import java.io.IOException
 
-// UI State Definition
+// Definisi State UI
 sealed interface DetailUiState {
     object Loading : DetailUiState
     data class Success(val article: Article) : DetailUiState
@@ -27,7 +27,7 @@ class DetailArticleViewModel(
     var detailUiState: DetailUiState by mutableStateOf(DetailUiState.Loading)
         private set
 
-    // Ambil ID dari argumen navigasi
+    // Mengambil ID artikel dari argumen navigasi
     private val articleId: Int = checkNotNull(savedStateHandle[DestinasiDetail.articleIdArg])
 
     init {
@@ -38,19 +38,21 @@ class DetailArticleViewModel(
         viewModelScope.launch {
             detailUiState = DetailUiState.Loading
             try {
+                // Panggil repository
                 val response = repository.getArticleDetail(articleId)
 
-                // PERBAIKAN DI SINI:
-                // Tambahkan pengecekan 'response.data != null' agar Kotlin yakin datanya ada
+                // PERBAIKAN PENTING:
+                // Cek status TRUE DAN datanya TIDAK NULL
                 if (response.status && response.data != null) {
                     detailUiState = DetailUiState.Success(response.data)
                 } else {
-                    detailUiState = DetailUiState.Error(response.message)
+                    // Jika status false atau data null, anggap error
+                    detailUiState = DetailUiState.Error(response.message ?: "Gagal memuat data artikel")
                 }
             } catch (e: IOException) {
-                detailUiState = DetailUiState.Error("Gagal memuat. Cek koneksi internet.")
+                detailUiState = DetailUiState.Error("Tidak ada koneksi internet.")
             } catch (e: Exception) {
-                detailUiState = DetailUiState.Error("Terjadi kesalahan: ${e.message}")
+                detailUiState = DetailUiState.Error("Terjadi kesalahan: ${e.localizedMessage}")
             }
         }
     }

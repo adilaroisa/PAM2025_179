@@ -11,6 +11,6 @@ data class Category(
 @Serializable
 data class CategoryResponse(
     val status: Boolean,
-    val message: String,
+    val message: String? = null,
     val data: List<Category> = emptyList()
 )

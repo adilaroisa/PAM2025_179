@@ -10,7 +10,6 @@ interface AppContainer {
     val userPreferences: UserPreferences
 }
 
-// PERBAIKAN: Tambahkan parameter context di sini
 class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val authRepository: AuthRepository by lazy {
@@ -18,10 +17,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
     }
 
     override val articleRepository: ArticleRepository by lazy {
-        NetworkArticleRepository(ApiClient.apiService)
+        ArticleRepository(ApiClient.apiService)
     }
 
     override val userPreferences: UserPreferences by lazy {
-        UserPreferences(context) // Sekarang context sudah dikenali
+        UserPreferences(context)
     }
 }

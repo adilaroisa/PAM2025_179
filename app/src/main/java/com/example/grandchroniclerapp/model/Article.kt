@@ -34,6 +34,6 @@ data class ArticleResponse(
 @Serializable
 data class DetailArticleResponse(
     val status: Boolean,
-    val message: String,
+    val message: String? = null,
     val data: Article? = null
 )

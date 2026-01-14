@@ -27,7 +27,7 @@ import androidx.navigation.navArgument
 import com.example.grandchroniclerapp.R
 import com.example.grandchroniclerapp.uicontroller.view.profile.ProfileScreen
 import com.example.grandchroniclerapp.uicontroller.view.profile.EditProfileScreen
-import com.example.grandchroniclerapp.uicontroller.view.profile.AboutScreen // Import AboutScreen
+import com.example.grandchroniclerapp.uicontroller.view.profile.AboutScreen
 import com.example.grandchroniclerapp.uicontroller.view.search.SearchScreen
 import com.example.grandchroniclerapp.uicontroller.view.article.DetailArticleScreen
 import com.example.grandchroniclerapp.uicontroller.view.article.EditArticleScreen
@@ -44,7 +44,7 @@ fun PengelolaHalaman(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // Daftar rute di mana Bottom Bar HARUS DISEMBUNYIKAN
+    // Daftar rute saat Bottom Bar HARUS DISEMBUNYIKAN
     val excludedRoutes = listOf(
         DestinasiLogin.route,
         DestinasiRegister.route,
@@ -52,7 +52,7 @@ fun PengelolaHalaman(
         DestinasiEditArticle.routeWithArgs,
         "edit_profile",
         DestinasiUpload.route,
-        DestinasiAbout.route // Tambahkan About agar bottom bar hilang di halaman ini
+        DestinasiAbout.route
     )
 
     val showBottomBar = currentRoute != null &&
@@ -81,7 +81,7 @@ fun PengelolaHalaman(
                             popUpTo(DestinasiLogin.route) { inclusive = true }
                         }
                     },
-                    onNavigateToRegister = { // Sesuaikan nama parameter di LoginScreen kamu
+                    onNavigateToRegister = {
                         navController.navigate(DestinasiRegister.route)
                     }
                 )
@@ -90,7 +90,7 @@ fun PengelolaHalaman(
             composable(DestinasiRegister.route) {
                 RegisterScreen(
                     onRegisterSuccess = { navController.popBackStack() },
-                    onNavigateBack = { navController.popBackStack() } // Sesuaikan nama parameter
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -120,7 +120,7 @@ fun PengelolaHalaman(
                 )
             }
 
-            // --- PROFILE (UPDATE LOGIKA DISINI) ---
+            // --- PROFILE ---
             composable(DestinasiProfile.route) {
                 ProfileScreen(
                     onEditProfile = {
@@ -129,11 +129,9 @@ fun PengelolaHalaman(
                     onEditArticle = { articleId ->
                         navController.navigate("${DestinasiEditArticle.route}/$articleId")
                     },
-                    // Tambahan navigasi ke Upload via FAB Profile
                     onAddArticle = {
                         navController.navigate(DestinasiUpload.route)
                     },
-                    // Tambahan navigasi ke About
                     onAboutClick = {
                         navController.navigate(DestinasiAbout.route)
                     },
@@ -150,7 +148,6 @@ fun PengelolaHalaman(
                 EditProfileScreen(
                     navigateBack = { navController.popBackStack() },
                     onDeleteAccountSuccess = {
-                        // Jika hapus akun berhasil, lempar ke Login dan bersihkan Backstack
                         navController.navigate(DestinasiLogin.route) {
                             popUpTo(0) { inclusive = true }
                         }
@@ -158,7 +155,7 @@ fun PengelolaHalaman(
                 )
             }
 
-            // --- HALAMAN ABOUT (BARU) ---
+            // --- HALAMAN ABOUT ---
             composable(DestinasiAbout.route) {
                 AboutScreen(
                     navigateBack = { navController.popBackStack() }

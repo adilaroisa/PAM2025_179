@@ -1,21 +1,24 @@
 package com.example.grandchroniclerapp.viewmodel.profile
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.grandchroniclerapp.data.UserPreferences
 import com.example.grandchroniclerapp.model.Article
 import com.example.grandchroniclerapp.model.User
 import com.example.grandchroniclerapp.repository.ArticleRepository
+import com.example.grandchroniclerapp.viewmodel.provider.PenyediaViewModel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 sealed interface ProfileUiState {
     object Loading : ProfileUiState
     data class Success(val user: User, val articles: List<Article>) : ProfileUiState
-    data class Error(val message: String) : ProfileUiState
+    object Error : ProfileUiState
 }
 
 class ProfileViewModel(
@@ -23,60 +26,59 @@ class ProfileViewModel(
     private val userPreferences: UserPreferences
 ) : ViewModel() {
 
-    var profileUiState: ProfileUiState by mutableStateOf(ProfileUiState.Loading)
-        private set
+    private val _uiState = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
+    val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
-    var deleteMessage by mutableStateOf<String?>(null)
+    private val _deleteMessage = Channel<String>()
+    val deleteMessage = _deleteMessage.receiveAsFlow()
 
-    fun loadUserProfile() {
+    init {
+        getProfile()
+    }
+
+    fun getProfile() {
         viewModelScope.launch {
-            profileUiState = ProfileUiState.Loading
+            _uiState.value = ProfileUiState.Loading
             try {
                 val userId = userPreferences.getUserId.first()
                 if (userId != -1) {
-                    // 1. Ambil Data User
                     val userRes = repository.getUserDetail(userId)
-                    // 2. Ambil Artikel User
-                    val articlesRes = repository.getUserArticles(userId)
+                    val articleRes = repository.getMyArticles(userId)
 
-                    // --- PERBAIKAN DI SINI ---
-                    // Pastikan userRes.data TIDAK NULL sebelum dipakai
-                    if (userRes.status && userRes.data != null && articlesRes.status) {
-                        profileUiState = ProfileUiState.Success(
-                            user = userRes.data, // Kotlin sekarang tau ini User (bukan User?)
-                            articles = articlesRes.data
-                        )
+                    if (userRes.status && userRes.data != null) {
+                        val articles = if (articleRes.status && articleRes.data != null) articleRes.data else emptyList()
+                        _uiState.value = ProfileUiState.Success(userRes.data, articles)
                     } else {
-                        profileUiState = ProfileUiState.Error("Gagal memuat data profil")
+                        _uiState.value = ProfileUiState.Error
                     }
                 } else {
-                    profileUiState = ProfileUiState.Error("Sesi berakhir")
+                    _uiState.value = ProfileUiState.Error
                 }
             } catch (e: Exception) {
-                profileUiState = ProfileUiState.Error("Terjadi kesalahan: ${e.message}")
+                _uiState.value = ProfileUiState.Error
             }
         }
     }
 
     fun deleteArticle(articleId: Int) {
         viewModelScope.launch {
-            val response = repository.deleteArticle(articleId)
-            if (response.status) {
-                deleteMessage = "Artikel berhasil dihapus"
-                loadUserProfile() // Refresh otomatis setelah hapus
-            } else {
-                deleteMessage = "Gagal menghapus: ${response.message}"
+            try {
+                val res = repository.deleteArticle(articleId)
+                if (res.status) {
+                    _deleteMessage.send("Artikel berhasil dihapus")
+                    getProfile() // Refresh data
+                } else {
+                    _deleteMessage.send(res.message ?: "Gagal menghapus")
+                }
+            } catch (e: Exception) {
+                _deleteMessage.send("Error: ${e.message}")
             }
         }
     }
 
     fun logout() {
         viewModelScope.launch {
-            userPreferences.clearSession()
+            userPreferences.saveUserId(-1)
         }
-    }
-
-    fun messageShown() {
-        deleteMessage = null
     }
 }

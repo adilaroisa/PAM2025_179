@@ -1,78 +1,135 @@
 package com.example.grandchroniclerapp.repository
 
-import com.example.grandchroniclerapp.model.AddArticleRequest
+import android.content.Context
+import android.net.Uri
 import com.example.grandchroniclerapp.model.AddArticleResponse
 import com.example.grandchroniclerapp.model.ArticleResponse
 import com.example.grandchroniclerapp.model.AuthResponse
 import com.example.grandchroniclerapp.model.CategoryResponse
 import com.example.grandchroniclerapp.model.DetailArticleResponse
-import com.example.grandchroniclerapp.model.UpdateUserRequest
 import com.example.grandchroniclerapp.model.UserDetailResponse
 import com.example.grandchroniclerapp.serviceapi.ApiService
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
+import java.io.FileOutputStream
 
-interface ArticleRepository {
-    suspend fun getArticles(query: String? = null): ArticleResponse
-    suspend fun getCategories(): CategoryResponse
-    suspend fun getArticleDetail(id: Int): DetailArticleResponse
-    suspend fun addArticle(request: AddArticleRequest): AddArticleResponse
-    suspend fun getMyArticles(userId: Int): ArticleResponse
-    suspend fun getUserArticles(userId: Int): ArticleResponse
-    suspend fun updateArticle(articleId: Int, request: AddArticleRequest): AddArticleResponse
-    suspend fun insertArticle(request: AddArticleRequest): AddArticleResponse
-    suspend fun getUserDetail(userId: Int): UserDetailResponse
-    suspend fun deleteArticle(articleId: Int): UserDetailResponse
-    suspend fun updateUser(userId: Int, request: UpdateUserRequest): UserDetailResponse
-    suspend fun deleteUser(id: Int): AuthResponse
-}
+class ArticleRepository(private val apiService: ApiService) {
 
-class NetworkArticleRepository(
-    private val apiService: ApiService
-) : ArticleRepository {
-    override suspend fun getArticles(query: String?): ArticleResponse {
-        return apiService.getArticles(query)
+    // Helper: String? -> RequestBody?
+    private fun createPartFromString(value: String?): RequestBody? {
+        // Jika string kosong (""), anggap null agar tidak dikirim ke server/dibatalkan server
+        if (value.isNullOrBlank()) return null
+        return value.toRequestBody("text/plain".toMediaTypeOrNull())
     }
 
-    override suspend fun getCategories(): CategoryResponse {
-        return apiService.getCategories()
+    // --- ARTIKEL ---
+    suspend fun getArticles(query: String? = null): ArticleResponse = apiService.getArticles(query)
+    suspend fun getCategories(): CategoryResponse = apiService.getCategories()
+    suspend fun getArticleDetail(id: Int): DetailArticleResponse = apiService.getArticleDetail(id)
+    suspend fun getMyArticles(userId: Int): ArticleResponse = apiService.getMyArticles(userId)
+    suspend fun deleteArticle(articleId: Int): UserDetailResponse = apiService.deleteArticle(articleId)
+
+    // Add Article (Draft/Published)
+    suspend fun addArticle(
+        title: String,
+        content: String?,
+        categoryId: String?,
+        userId: String,
+        status: String,
+        imageUris: List<Uri>,
+        context: Context
+    ): AddArticleResponse {
+        val titlePart = createPartFromString(title)!!
+        val contentPart = createPartFromString(content)
+        val categoryPart = createPartFromString(categoryId)
+        val userPart = createPartFromString(userId)!!
+        val statusPart = createPartFromString(status)!!
+        val imageParts = prepareImageParts(imageUris, context)
+
+        return apiService.addArticle(titlePart, contentPart, categoryPart, userPart, statusPart, imageParts)
     }
 
-    override suspend fun getArticleDetail(id: Int): DetailArticleResponse {
-        return apiService.getArticleDetail(id)
+    // Update Article
+    suspend fun updateArticle(
+        articleId: Int,
+        title: String,
+        content: String?,
+        categoryId: String?,
+        status: String,
+        newImageUris: List<Uri>,
+        deletedImagesJson: String?,
+        context: Context
+    ): AddArticleResponse {
+        val titlePart = createPartFromString(title)!!
+        val contentPart = createPartFromString(content)
+        val categoryPart = createPartFromString(categoryId)
+        val statusPart = createPartFromString(status)!!
+        val deletedPart = createPartFromString(deletedImagesJson)
+        val imageParts = prepareImageParts(newImageUris, context)
+
+        return apiService.updateArticle(articleId, titlePart, contentPart, categoryPart, statusPart, imageParts, deletedPart)
     }
 
-    override suspend fun addArticle(request: AddArticleRequest): AddArticleResponse {
-        return apiService.addArticle(request)
+    // --- USER (PROFIL) ---
+
+    // 1. Get User
+    suspend fun getUserDetail(userId: Int): UserDetailResponse = apiService.getUserDetail(userId)
+
+    // 2. Delete User
+    suspend fun deleteUser(userId: Int): AuthResponse = apiService.deleteUser(userId)
+
+    // 3. Update User
+    suspend fun updateUser(
+        userId: Int,
+        fullName: String,
+        email: String,
+        bio: String?,
+        password: String?,
+        photoUri: Uri?,
+        context: Context
+    ): UserDetailResponse {
+        val namePart = createPartFromString(fullName)!!
+        val emailPart = createPartFromString(email)!!
+        val bioPart = createPartFromString(bio)
+        val passPart = if (password.isNullOrBlank()) null else createPartFromString(password)
+
+        var photoPart: MultipartBody.Part? = null
+        if (photoUri != null) {
+            val file = getFileFromUri(context, photoUri)
+            if (file != null) {
+                val reqFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                photoPart = MultipartBody.Part.createFormData("profile_photo", file.name, reqFile)
+            }
+        }
+        return apiService.updateUser(userId, namePart, emailPart, bioPart, passPart, photoPart)
     }
 
-    override suspend fun getMyArticles(userId: Int): ArticleResponse {
-        return apiService.getMyArticles(userId)
+    // --- HELPER FILES ---
+    private fun prepareImageParts(imageUris: List<Uri>, context: Context): List<MultipartBody.Part> {
+        val parts = mutableListOf<MultipartBody.Part>()
+        imageUris.forEach { uri ->
+            val file = getFileFromUri(context, uri)
+            if (file != null) {
+                val requestFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                parts.add(MultipartBody.Part.createFormData("images", file.name, requestFile))
+            }
+        }
+        return parts
     }
 
-    override suspend fun getUserArticles(userId: Int): ArticleResponse {
-        return apiService.getMyArticles(userId)
-    }
-
-    override suspend fun updateArticle(articleId: Int, request: AddArticleRequest): AddArticleResponse {
-        return apiService.updateArticle(articleId, request)
-    }
-
-    override suspend fun insertArticle(request: AddArticleRequest): AddArticleResponse {
-        return apiService.insertArticle(request)
-    }
-
-    override suspend fun getUserDetail(userId: Int): UserDetailResponse {
-        return apiService.getUserDetail(userId)
-    }
-
-    override suspend fun deleteArticle(articleId: Int): UserDetailResponse {
-        return apiService.deleteArticle(articleId)
-    }
-
-    override suspend fun updateUser(userId: Int, request: UpdateUserRequest): UserDetailResponse {
-        return apiService.updateUser(userId, request)
-    }
-
-    override suspend fun deleteUser(id: Int): AuthResponse {
-        return apiService.deleteUser(id) // Sesuaikan dengan nama di ApiService kamu
+    private fun getFileFromUri(context: Context, uri: Uri): File? {
+        return try {
+            val inputStream = context.contentResolver.openInputStream(uri)
+            val file = File(context.cacheDir, "temp_${System.currentTimeMillis()}.jpg")
+            val outputStream = FileOutputStream(file)
+            inputStream?.copyTo(outputStream)
+            inputStream?.close()
+            outputStream.close()
+            file
+        } catch (e: Exception) { null }
     }
 }

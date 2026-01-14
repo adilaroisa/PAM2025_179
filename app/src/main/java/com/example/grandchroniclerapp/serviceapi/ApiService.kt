@@ -1,80 +1,73 @@
 package com.example.grandchroniclerapp.serviceapi
 
-import com.example.grandchroniclerapp.model.AddArticleRequest
-import com.example.grandchroniclerapp.model.AddArticleResponse
-import com.example.grandchroniclerapp.model.ArticleResponse
-import com.example.grandchroniclerapp.model.AuthResponse
-import com.example.grandchroniclerapp.model.CategoryResponse
-import com.example.grandchroniclerapp.model.DetailArticleResponse
-import com.example.grandchroniclerapp.model.LoginRequest
-import com.example.grandchroniclerapp.model.RegisterRequest
-import com.example.grandchroniclerapp.model.UpdateUserRequest
-import com.example.grandchroniclerapp.model.UserDetailResponse
-import retrofit2.http.Body
-import retrofit2.http.DELETE
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.PUT
-import retrofit2.http.Path
-import retrofit2.http.Query
+import com.example.grandchroniclerapp.model.*
+import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import retrofit2.http.*
 
 interface ApiService {
+    // --- AUTH ---
     @POST("auth/register")
     suspend fun register(@Body request: RegisterRequest): AuthResponse
 
     @POST("auth/login")
     suspend fun login(@Body request: LoginRequest): AuthResponse
 
+    // --- ARTIKEL (READ & DELETE) ---
     @GET("articles")
-    suspend fun getArticles(
-        @Query("q") query: String? = null
-    ): ArticleResponse
+    suspend fun getArticles(@Query("q") query: String? = null): ArticleResponse
 
     @GET("categories")
     suspend fun getCategories(): CategoryResponse
 
     @GET("articles/{id}")
-    suspend fun getArticleDetail(
-        @Path("id") id: Int
-    ): DetailArticleResponse
-
-    @POST("articles")
-    suspend fun addArticle(
-        @Body request: AddArticleRequest
-    ): AddArticleResponse
+    suspend fun getArticleDetail(@Path("id") id: Int): DetailArticleResponse
 
     @GET("users/{id}/articles")
-    suspend fun getMyArticles(
-        @Path("id") userId: Int
-    ): ArticleResponse
+    suspend fun getMyArticles(@Path("id") userId: Int): ArticleResponse
 
     @DELETE("articles/{id}")
     suspend fun deleteArticle(@Path("id") articleId: Int): UserDetailResponse
 
+    // --- ARTIKEL (CREATE & UPDATE - MULTIPART) ---
+    @Multipart
+    @POST("articles")
+    suspend fun addArticle(
+        @Part("title") title: RequestBody,
+        @Part("content") content: RequestBody?,      // Boleh null (Draft)
+        @Part("category_id") categoryId: RequestBody?, // Boleh null (Draft)
+        @Part("user_id") userId: RequestBody,
+        @Part("status") status: RequestBody,
+        @Part images: List<MultipartBody.Part>
+    ): AddArticleResponse
+
+    @Multipart
     @PUT("articles/{id}")
     suspend fun updateArticle(
         @Path("id") articleId: Int,
-        @Body request: AddArticleRequest
+        @Part("title") title: RequestBody,
+        @Part("content") content: RequestBody?,      // Boleh null
+        @Part("category_id") categoryId: RequestBody?, // Boleh null
+        @Part("status") status: RequestBody,
+        @Part images: List<MultipartBody.Part>,
+        @Part("deleted_images") deletedImages: RequestBody? = null
     ): AddArticleResponse
 
-    @POST("articles")
-    suspend fun insertArticle(
-        @Body request: AddArticleRequest
-    ): AddArticleResponse
-
+    // --- USER ---
     @GET("users/{id}")
-    suspend fun getUserDetail(
-        @Path("id") userId: Int
-    ): UserDetailResponse
+    suspend fun getUserDetail(@Path("id") userId: Int): UserDetailResponse
 
+    @DELETE("users/{id}")
+    suspend fun deleteUser(@Path("id") userId: Int): AuthResponse
+
+    @Multipart
     @PUT("users/{id}")
     suspend fun updateUser(
         @Path("id") userId: Int,
-        @Body request: UpdateUserRequest
+        @Part("full_name") fullName: RequestBody,
+        @Part("email") email: RequestBody,
+        @Part("bio") bio: RequestBody?,
+        @Part("password") password: RequestBody?,
+        @Part profile_photo: MultipartBody.Part?
     ): UserDetailResponse
-
-    @DELETE("users/{id}")
-    suspend fun deleteUser(
-        @Path("id") userId: Int
-    ): AuthResponse
 }

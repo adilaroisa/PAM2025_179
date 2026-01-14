@@ -5,18 +5,16 @@ import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.grandchroniclerapp.viewmodel.auth.LoginViewModel
-import com.example.grandchroniclerapp.viewmodel.auth.RegisterViewModel
 import com.example.grandchroniclerapp.GrandChroniclerApp
 import com.example.grandchroniclerapp.viewmodel.article.DetailArticleViewModel
 import com.example.grandchroniclerapp.viewmodel.article.EditArticleViewModel
 import com.example.grandchroniclerapp.viewmodel.article.InsertViewModel
-import com.example.grandchroniclerapp.viewmodel.article.UploadViewModel
+import com.example.grandchroniclerapp.viewmodel.auth.LoginViewModel
+import com.example.grandchroniclerapp.viewmodel.auth.RegisterViewModel
 import com.example.grandchroniclerapp.viewmodel.home.HomeViewModel
 import com.example.grandchroniclerapp.viewmodel.profile.EditProfileViewModel
 import com.example.grandchroniclerapp.viewmodel.profile.ProfileViewModel
 import com.example.grandchroniclerapp.viewmodel.search.SearchViewModel
-
 
 object PenyediaViewModel {
     val Factory = viewModelFactory {
@@ -32,11 +30,13 @@ object PenyediaViewModel {
         initializer {
             EditProfileViewModel(
                 aplikasiGrandChronicler().container.articleRepository,
-                aplikasiGrandChronicler().container.userPreferences // TAMBAHKAN BARIS INI
+                aplikasiGrandChronicler().container.userPreferences
             )
         }
         initializer {
-            EditArticleViewModel(aplikasiGrandChronicler().container.articleRepository)
+            EditArticleViewModel(
+                aplikasiGrandChronicler().container.articleRepository
+            )
         }
         initializer {
             InsertViewModel(
@@ -56,18 +56,10 @@ object PenyediaViewModel {
                 aplikasiGrandChronicler().container.userPreferences
             )
         }
-
         initializer {
             ProfileViewModel(
                 aplikasiGrandChronicler().container.articleRepository,
-                aplikasiGrandChronicler().container.userPreferences // Tambah ini
-            )
-        }
-
-        initializer {
-            UploadViewModel(
-                aplikasiGrandChronicler().container.articleRepository,
-                aplikasiGrandChronicler().container.userPreferences // Tambah ini
+                aplikasiGrandChronicler().container.userPreferences
             )
         }
     }

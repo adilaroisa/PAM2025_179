@@ -306,8 +306,8 @@ fun EditProfileScreen(
                 onClick = {
                     if (viewModel.fullName.isBlank() || viewModel.email.isBlank()) {
                         scope.launch { snackbarHostState.showSnackbar("Nama dan Email wajib diisi") }
-                    } else if (viewModel.password.isNotEmpty() && viewModel.password.length < 8) {
-                        scope.launch { snackbarHostState.showSnackbar("Password minimal 8 karakter") }
+                    } else if (viewModel.password.isNotEmpty() && viewModel.password.length < 6) {
+                        scope.launch { snackbarHostState.showSnackbar("Password minimal 6 karakter") }
                     } else {
                         showSaveConfirmDialog = true
                     }
