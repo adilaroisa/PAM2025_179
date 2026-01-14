@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.grandchroniclerapp.ui.theme.PastelBluePrimary
 import com.example.grandchroniclerapp.viewmodel.article.DetailArticleViewModel
 import com.example.grandchroniclerapp.viewmodel.article.DetailUiState
@@ -42,7 +44,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DetailArticleScreen(
     navigateBack: () -> Unit,
-    onTagClick: (String) -> Unit, // Tetap ditambahkan agar klik tag berfungsi
+    onTagClick: (String) -> Unit,
     viewModel: DetailArticleViewModel = viewModel(factory = PenyediaViewModel.Factory)
 ) {
     val uiState = viewModel.detailUiState
@@ -78,14 +80,20 @@ fun DetailArticleScreen(
                         .padding(innerPadding)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // --- 1. HEADER GAMBAR SLIDER ---
+                    // --- 1. HEADER GAMBAR SLIDER (HYBRID HEIGHT) ---
                     if (article.images.isNotEmpty()) {
                         val pagerState = rememberPagerState(pageCount = { article.images.size })
+
+                        // [LOGIKA BARU]: Tentukan tinggi gambar berdasarkan kategori
+                        // Jika ID = 2 (Tokoh Dunia), pakai Portrait (500.dp)
+                        // Selain itu pakai Landscape standard (300.dp)
+                        val isTokohDunia = article.category_id == 2
+                        val headerHeight = if (isTokohDunia) 500.dp else 300.dp
 
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(300.dp)
+                                .height(headerHeight) // Tinggi Dinamis diterapkan di sini
                                 .background(Color.LightGray)
                         ) {
                             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
@@ -95,31 +103,34 @@ fun DetailArticleScreen(
 
                                     // Gambar Utama
                                     AsyncImage(
-                                        model = fullUrl,
+                                        model = ImageRequest.Builder(LocalContext.current)
+                                            .data(fullUrl)
+                                            .crossfade(true)
+                                            .build(),
                                         contentDescription = null,
                                         modifier = Modifier.fillMaxSize(),
                                         contentScale = ContentScale.Crop
                                     )
 
                                     // --- CAPTION KECIL & TRANSPARAN ---
-                                    // Mengambil caption berdasarkan halaman (page)
+                                    // Ambil caption dengan aman (cek null/index)
                                     val caption = if (page < article.captions.size) article.captions[page] else ""
 
                                     if (caption.isNotBlank()) {
                                         Box(
                                             modifier = Modifier
                                                 .align(Alignment.BottomStart)
-                                                .padding(start = 12.dp, bottom = 12.dp, end = 60.dp) // Padding end agar tidak menabrak indikator halaman
+                                                .padding(start = 16.dp, bottom = 16.dp, end = 80.dp) // Padding end besar agar tidak menabrak indikator
                                                 .background(
-                                                    color = Color.Black.copy(alpha = 0.6f), // Hitam Transparan
+                                                    color = Color.Black.copy(alpha = 0.6f),
                                                     shape = RoundedCornerShape(8.dp)
                                                 )
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                .padding(horizontal = 12.dp, vertical = 8.dp)
                                         ) {
                                             Text(
                                                 text = caption,
                                                 color = Color.White,
-                                                style = MaterialTheme.typography.labelSmall, // Font Kecil
+                                                style = MaterialTheme.typography.labelSmall,
                                                 fontStyle = FontStyle.Italic,
                                                 maxLines = 2,
                                                 overflow = TextOverflow.Ellipsis
@@ -145,7 +156,11 @@ fun DetailArticleScreen(
                                 }
                                 // Indikator Halaman (Angka)
                                 Box(
-                                    modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp).background(Color.Black.copy(0.6f), RoundedCornerShape(16.dp)).padding(horizontal = 10.dp, vertical = 4.dp)
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(16.dp)
+                                        .background(Color.Black.copy(0.6f), RoundedCornerShape(16.dp))
+                                        .padding(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
                                     Text("${pagerState.currentPage + 1}/${article.images.size}", color = Color.White, style = MaterialTheme.typography.labelSmall)
                                 }
@@ -167,20 +182,16 @@ fun DetailArticleScreen(
                         Text(article.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(16.dp))
 
-                        // Metadata (Penulis | Tanggal | Views)
+                        // Metadata
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Person, null, Modifier.size(16.dp), tint = Color.Gray)
                             Spacer(Modifier.width(4.dp))
                             Text(article.author_name ?: "Unknown", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-
                             Spacer(Modifier.width(16.dp))
-
                             Icon(Icons.Default.CalendarToday, null, Modifier.size(16.dp), tint = Color.Gray)
                             Spacer(Modifier.width(4.dp))
                             Text(article.published_at?.take(10) ?: "Draft", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-
                             Spacer(Modifier.width(16.dp))
-
                             Icon(Icons.Default.Visibility, null, Modifier.size(16.dp), tint = Color.Gray)
                             Spacer(Modifier.width(4.dp))
                             Text("${article.views_count} x Dilihat", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
@@ -189,7 +200,6 @@ fun DetailArticleScreen(
                         // --- 3. TAGS / HASHTAG ---
                         if (!article.tags.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(16.dp))
-
                             val tagList = article.tags.split(" ", "\n").filter { it.isNotBlank() }
 
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

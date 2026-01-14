@@ -1,12 +1,14 @@
 package com.example.grandchroniclerapp.uicontroller.view.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -40,21 +43,23 @@ fun HomeScreen(
 ) {
     val uiState = viewModel.homeUiState
 
-    // UTAMA: Detektor Scroll
-    val gridState = rememberLazyGridState()
+    // GUNAKAN STATE KHUSUS STAGGERED GRID
+    val gridState = rememberLazyStaggeredGridState()
+
+    // Logika Infinite Scroll (Load More)
     val isAtBottom by remember {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
             val totalItems = layoutInfo.totalItemsCount
             val lastVisibleItemIndex = layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            // Trigger load more jika sudah melihat item ke-(Total - 4)
+            // Load more jika item yang terlihat mendekati total item
             totalItems > 0 && lastVisibleItemIndex >= (totalItems - 4)
         }
     }
 
     LaunchedEffect(isAtBottom) {
         if (isAtBottom) {
-            viewModel.loadArticles(reset = false) // Load Next Page
+            viewModel.loadArticles(reset = false)
         }
     }
 
@@ -86,22 +91,32 @@ fun HomeScreen(
                                 Text("Belum ada kisah sejarah.", color = Color.Gray)
                             }
                         } else {
-                            // TAMPILKAN GRID
-                            LazyVerticalGrid(
-                                state = gridState, // Hubungkan state scroll
-                                columns = GridCells.Fixed(2),
+                            // --- IMPLEMENTASI HYBRID STAGGERED GRID ---
+                            LazyVerticalStaggeredGrid(
+                                state = gridState,
+                                columns = StaggeredGridCells.Fixed(2),
                                 contentPadding = PaddingValues(top = 24.dp, bottom = 120.dp, start = 16.dp, end = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalItemSpacing = 16.dp,
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(viewModel.articles) { article ->
-                                    ArticleCard(article = article, onClick = { onDetailClick(article.article_id) })
+
+                                    // LOGIKA HYBRID:
+                                    // Jika Tokoh Dunia (ID 2) -> Pinterest Style (Tinggi Bebas)
+                                    // Lainnya -> Uniform Grid (Tinggi Tetap)
+                                    val isTokohDunia = article.category_id == 2
+
+                                    HybridArticleCard(
+                                        article = article,
+                                        isPinterestStyle = isTokohDunia,
+                                        onClick = { onDetailClick(article.article_id) }
+                                    )
                                 }
 
-                                // Loading Indicator di Bawah (Saat scroll)
                                 if (viewModel.isLoadingMore) {
-                                    item {
+                                    // Span FullLine agar loading di tengah
+                                    item(span = StaggeredGridItemSpan.FullLine) {
                                         Box(Modifier.fillMaxWidth().height(50.dp), contentAlignment = Alignment.Center) {
                                             CircularProgressIndicator(modifier = Modifier.size(24.dp), color = PastelBluePrimary)
                                         }
@@ -126,39 +141,77 @@ fun HomeScreen(
 }
 
 @Composable
-fun ArticleCard(article: Article, onClick: () -> Unit) {
+fun HybridArticleCard(
+    article: Article,
+    isPinterestStyle: Boolean,
+    onClick: () -> Unit
+) {
     val thumbnailImage = article.images.firstOrNull() ?: article.image
 
+    // 1. Logika Kartu (Hybrid)
+    val sizeModifier = if (isPinterestStyle) {
+        Modifier.fillMaxWidth().wrapContentHeight()
+    } else {
+        Modifier.fillMaxWidth().height(280.dp)
+    }
+
+    // 2. Warna Badge Khusus Tokoh Dunia (Emas vs Pink Biasa)
+    val badgeColor = if (isPinterestStyle) Color(0xFFFFF9C4) else PastelPinkContainer // Kuning Emas Muda vs Pink
+    val badgeBorder = if (isPinterestStyle) BorderStroke(1.dp, Color(0xFFFBC02D)) else null // Border Emas
+
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier = sizeModifier.clickable { onClick() },
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
             if (thumbnailImage != null) {
-                // Fix URL jika tidak ada http
                 val imgUrl = if (thumbnailImage.startsWith("http")) thumbnailImage else "http://10.0.2.2:3000/uploads/$thumbnailImage"
+
+                val imageModifier = if (isPinterestStyle) {
+                    Modifier.fillMaxWidth().wrapContentHeight()
+                } else {
+                    Modifier.fillMaxWidth().height(140.dp)
+                }
+
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current).data(imgUrl).crossfade(true).build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxWidth().height(150.dp)
+                    modifier = imageModifier
                 )
             } else {
-                Box(modifier = Modifier.fillMaxWidth().height(150.dp).background(Color(0xFFEEEEEE)), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxWidth().height(140.dp).background(Color(0xFFEEEEEE)), contentAlignment = Alignment.Center) {
                     Text("No Image", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                 }
             }
 
             Column(modifier = Modifier.padding(12.dp)) {
-                Surface(color = PastelPinkContainer, shape = RoundedCornerShape(6.dp)) {
-                    Text(text = article.category_name ?: "Umum", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = BlackText)
+                // Badge Kategori
+                Surface(
+                    color = badgeColor,
+                    shape = RoundedCornerShape(6.dp),
+                    border = badgeBorder
+                ) {
+                    Text(
+                        text = article.category_name ?: "Umum",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        color = BlackText
+                    )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
+
                 Text(text = article.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = BlackText, maxLines = 2, overflow = TextOverflow.Ellipsis)
+
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(text = "Oleh: ${article.author_name ?: "Sejarawan"}", style = MaterialTheme.typography.bodySmall, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+                if (isPinterestStyle && article.content.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = article.content.take(60) + "...", style = MaterialTheme.typography.bodySmall, color = Color.Gray, lineHeight = 14.sp)
+                }
             }
         }
     }
