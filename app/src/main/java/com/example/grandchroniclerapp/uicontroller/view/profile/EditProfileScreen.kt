@@ -65,9 +65,6 @@ fun EditProfileScreen(
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
 
-    fun isNameValid(name: String): Boolean = Regex("^[a-zA-Z0-9 ]*$").matches(name)
-    fun isEmailValid(email: String): Boolean = email.contains("@")
-
     fun onBackAttempt() {
         if (viewModel.hasChanges()) showDiscardDialog = true else navigateBack()
     }
@@ -158,7 +155,7 @@ fun EditProfileScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
 
-                    // --- BAGIAN FOTO PROFIL ---
+                    // --- FOTO PROFIL ---
                     Box(contentAlignment = Alignment.BottomEnd) {
                         Box(
                             modifier = Modifier
@@ -202,7 +199,7 @@ fun EditProfileScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // --- STATUS AKUN (Sesuai SRS 1.a) ---
+                    // --- STATUS AKUN ---
                     OutlinedTextField(
                         value = viewModel.role,
                         onValueChange = {},
@@ -300,7 +297,7 @@ fun EditProfileScreen(
             IconButton(onClick = { onBackAttempt() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
             }
-            Text("Edit Profil", style = MaterialTheme.typography.titleLarge, color = Color.White)
+            Text("Edit Profil", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
         }
 
         // Floating Action Button (Simpan)
@@ -324,9 +321,21 @@ fun EditProfileScreen(
             }
         }
 
-        // Snackbar
-        Box(modifier = Modifier.fillMaxSize().padding(bottom = 20.dp), contentAlignment = Alignment.BottomCenter) {
-            SnackbarHost(hostState = snackbarHostState)
+        // SNACKBAR
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+            SnackbarHost(hostState = snackbarHostState) { data ->
+                val isSuccess = data.visuals.message.contains("Berhasil", true)
+                val bgColor = if (isSuccess) Brush.horizontalGradient(listOf(PastelBluePrimary, PastelPinkSecondary)) else Brush.linearGradient(listOf(SoftError, SoftError))
+                val icon = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Close
+
+                Box(modifier = Modifier.padding(16.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bgColor).padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(icon, null, tint = Color.White)
+                        Spacer(Modifier.width(12.dp))
+                        Text(data.visuals.message, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }
