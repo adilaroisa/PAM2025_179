@@ -39,10 +39,11 @@ class SearchViewModel(private val repository: ArticleRepository) : ViewModel() {
             try {
                 val response = repository.getCategories()
                 if (response.status) {
-                    categories = response.data
+                    // Filter kategori agar ID 7 (Tanpa Kategori) tidak masuk list
+                    categories = response.data.filter { it.category_id != 7 }
                 }
             } catch (e: Exception) {
-                // Kategori gagal dimuat
+                // Kategori gagal dimuat, abaikan saja agar UI tidak crash
             }
         }
     }
@@ -63,16 +64,13 @@ class SearchViewModel(private val repository: ArticleRepository) : ViewModel() {
             try {
                 val response = repository.getArticles(query)
                 if (response.status) {
-                    // Pastikan data tidak null dengan emptyList()
                     searchUiState = SearchUiState.Success(response.data ?: emptyList())
                 } else {
-                    // FIX: Tambahkan operator Elvis (?:) untuk menangani null
                     searchUiState = SearchUiState.Error(response.message ?: "Gagal mencari artikel")
                 }
             } catch (e: IOException) {
                 searchUiState = SearchUiState.Error("Tidak ada koneksi internet")
             } catch (e: Exception) {
-                // FIX: Berikan pesan default jika e.message null
                 searchUiState = SearchUiState.Error("Terjadi kesalahan: ${e.message ?: "Kesalahan tidak diketahui"}")
             }
         }
