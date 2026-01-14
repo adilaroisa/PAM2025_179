@@ -56,3 +56,8 @@ object DestinasiAbout : DestinasiNavigasi {
     override val route = "about_screen"
     override val titleRes = R.string.about_title
 }
+
+object DestinasiTerms : DestinasiNavigasi {
+    override val route = "terms_of_service"
+    override val titleRes = R.string.app_name
+}

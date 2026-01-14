@@ -34,6 +34,7 @@ import com.example.grandchroniclerapp.uicontroller.view.article.EditArticleScree
 import com.example.grandchroniclerapp.uicontroller.view.article.InsertArticleScreen
 import com.example.grandchroniclerapp.uicontroller.view.auth.LoginScreen
 import com.example.grandchroniclerapp.uicontroller.view.auth.RegisterScreen
+import com.example.grandchroniclerapp.uicontroller.view.auth.TermsOfServiceScreen // Pastikan sudah di-import
 import com.example.grandchroniclerapp.uicontroller.view.home.HomeScreen
 
 @Composable
@@ -48,6 +49,7 @@ fun PengelolaHalaman(
     val excludedRoutes = listOf(
         DestinasiLogin.route,
         DestinasiRegister.route,
+        DestinasiTerms.route, // Sembunyikan bottom bar di Terms
         DestinasiDetail.routeWithArg,
         DestinasiEditArticle.routeWithArgs,
         "edit_profile",
@@ -90,7 +92,16 @@ fun PengelolaHalaman(
             composable(DestinasiRegister.route) {
                 RegisterScreen(
                     onRegisterSuccess = { navController.popBackStack() },
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    // Callback navigasi ke Terms
+                    onNavigateToTerms = { navController.navigate(DestinasiTerms.route) }
+                )
+            }
+
+            // --- TERMS OF SERVICE (HALAMAN BARU) ---
+            composable(DestinasiTerms.route) {
+                TermsOfServiceScreen(
+                    navigateBack = { navController.popBackStack() }
                 )
             }
 
@@ -186,11 +197,8 @@ fun PengelolaHalaman(
                 DetailArticleScreen(
                     navigateBack = { navController.popBackStack() },
                     onTagClick = { tag ->
-                        // Bersihkan hashtag agar URL bersih (opsional)
                         val cleanTag = tag.replace("#", "")
-                        // Navigasi ke Search dengan membawa query
                         navController.navigate("${DestinasiSearch.route}?query=$cleanTag") {
-                            // Hindari tumpukan halaman search yang berulang
                             launchSingleTop = true
                         }
                     }
@@ -225,7 +233,7 @@ data class BottomNavItem(
 fun BottomBarGrandChronicler(navController: NavHostController) {
     val items = listOf(
         BottomNavItem(R.string.menu_home, Icons.Default.Home, DestinasiHome.route),
-        BottomNavItem(R.string.menu_search, Icons.Default.Search, "${DestinasiSearch.route}?query="), // Default kosong
+        BottomNavItem(R.string.menu_search, Icons.Default.Search, "${DestinasiSearch.route}?query="),
         BottomNavItem(R.string.menu_upload, Icons.Default.AddCircle, DestinasiUpload.route),
         BottomNavItem(R.string.menu_profile, Icons.Default.AccountCircle, DestinasiProfile.route),
     )
@@ -235,7 +243,6 @@ fun BottomBarGrandChronicler(navController: NavHostController) {
         val currentDestination = navBackStackEntry?.destination
 
         items.forEach { item ->
-            // Logika search ada parameter parameter
             val selected = currentDestination?.route?.startsWith(item.route.substringBefore("?")) == true
 
             NavigationBarItem(
@@ -243,7 +250,6 @@ fun BottomBarGrandChronicler(navController: NavHostController) {
                 label = { Text(stringResource(item.label)) },
                 selected = selected,
                 onClick = {
-                    // Saat klik menu search, reset query jadi kosong
                     val targetRoute = if(item.route.contains("search")) "${DestinasiSearch.route}?query=" else item.route
 
                     navController.navigate(targetRoute) {
