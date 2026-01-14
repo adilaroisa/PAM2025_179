@@ -14,7 +14,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -26,7 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.size.Size // Import Size untuk Coil
+import coil.size.Size
 import com.example.grandchroniclerapp.R
 import com.example.grandchroniclerapp.model.Article
 import com.example.grandchroniclerapp.ui.theme.PastelBluePrimary
@@ -62,7 +61,8 @@ fun HomeScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(PastelBluePrimary)) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.height(80.dp))
+            Spacer(modifier = Modifier.height(130.dp))
+
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
@@ -97,10 +97,7 @@ fun HomeScreen(
                                 modifier = Modifier.fillMaxSize()
                             ) {
                                 items(viewModel.articles, key = { it.article_id }) { article ->
-                                    // PENTING: Tambahkan key agar Compose bisa melacak item dengan benar dan mengurangi redraw yang aneh
-
                                     val isTokohDunia = article.category_id == 2
-
                                     HybridArticleCard(
                                         article = article,
                                         isPinterestStyle = isTokohDunia,
@@ -122,12 +119,36 @@ fun HomeScreen(
             }
         }
 
+        // --- HEADER JUDUL ---
         Row(
-            modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(130.dp)
+                .padding(horizontal = 16.dp)
+                .padding(top = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Text(text = stringResource(R.string.home_title), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White)
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                // Baris 1: The Grand
+                Text(
+                    text = "The Grand",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+
+                // Baris 2: Chronicler
+                Text(
+                    text = "Chronicler",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
         }
     }
 }
@@ -141,8 +162,6 @@ fun HybridArticleCard(
     val thumbnailImage = article.images.firstOrNull() ?: article.image
 
     // 1. Modifier Kartu
-    // Kalau Pinterest Style, kita biarkan tingginya mengikuti konten (wrapContentHeight)
-    // Kalau Normal, kita fix tinggi kartunya
     val sizeModifier = if (isPinterestStyle) {
         Modifier.fillMaxWidth().wrapContentHeight()
     } else {
