@@ -103,8 +103,20 @@ fun PengelolaHalaman(
                 )
             }
 
-            composable(DestinasiSearch.route) {
+            // --- SEARCH SCREEN ---
+            composable(
+                route = "${DestinasiSearch.route}?query={query}",
+                arguments = listOf(
+                    navArgument("query") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                )
+            ) { backStackEntry ->
+                val query = backStackEntry.arguments?.getString("query")
                 SearchScreen(
+                    initialQuery = query,
                     onDetailClick = { articleId ->
                         navController.navigate("${DestinasiDetail.route}/$articleId")
                     }
@@ -172,7 +184,16 @@ fun PengelolaHalaman(
                 )
             ) {
                 DetailArticleScreen(
-                    navigateBack = { navController.popBackStack() }
+                    navigateBack = { navController.popBackStack() },
+                    onTagClick = { tag ->
+                        // Bersihkan hashtag agar URL bersih (opsional)
+                        val cleanTag = tag.replace("#", "")
+                        // Navigasi ke Search dengan membawa query
+                        navController.navigate("${DestinasiSearch.route}?query=$cleanTag") {
+                            // Hindari tumpukan halaman search yang berulang
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
@@ -204,22 +225,28 @@ data class BottomNavItem(
 fun BottomBarGrandChronicler(navController: NavHostController) {
     val items = listOf(
         BottomNavItem(R.string.menu_home, Icons.Default.Home, DestinasiHome.route),
-        BottomNavItem(R.string.menu_search, Icons.Default.Search, DestinasiSearch.route),
+        BottomNavItem(R.string.menu_search, Icons.Default.Search, "${DestinasiSearch.route}?query="), // Default kosong
         BottomNavItem(R.string.menu_upload, Icons.Default.AddCircle, DestinasiUpload.route),
         BottomNavItem(R.string.menu_profile, Icons.Default.AccountCircle, DestinasiProfile.route),
     )
 
     NavigationBar {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
-        val currentRoute = navBackStackEntry?.destination?.route
+        val currentDestination = navBackStackEntry?.destination
 
         items.forEach { item ->
+            // Logika search ada parameter parameter
+            val selected = currentDestination?.route?.startsWith(item.route.substringBefore("?")) == true
+
             NavigationBarItem(
                 icon = { Icon(item.icon, contentDescription = stringResource(item.label)) },
                 label = { Text(stringResource(item.label)) },
-                selected = currentRoute == item.route,
+                selected = selected,
                 onClick = {
-                    navController.navigate(item.route) {
+                    // Saat klik menu search, reset query jadi kosong
+                    val targetRoute = if(item.route.contains("search")) "${DestinasiSearch.route}?query=" else item.route
+
+                    navController.navigate(targetRoute) {
                         popUpTo(navController.graph.findStartDestination().id) {
                             saveState = true
                         }

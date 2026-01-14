@@ -25,7 +25,6 @@ class ArticleRepository(private val apiService: ApiService) {
     }
 
     // --- ARTIKEL ---
-    // Update: Tambah parameter page
     suspend fun getArticles(query: String? = null, categoryId: Int? = null, page: Int = 1): ArticleResponse {
         return apiService.getArticles(query, categoryId, page)
     }
@@ -35,14 +34,14 @@ class ArticleRepository(private val apiService: ApiService) {
     suspend fun getMyArticles(userId: Int): ArticleResponse = apiService.getMyArticles(userId)
     suspend fun deleteArticle(articleId: Int): UserDetailResponse = apiService.deleteArticle(articleId)
 
-    // Add Article (Update Tags)
+    // Add Article
     suspend fun addArticle(
         title: String,
         content: String?,
         categoryId: String?,
         userId: String,
         status: String,
-        tags: String?, // <--- TAGS
+        tags: String?,
         imageUris: List<Uri>,
         context: Context
     ): AddArticleResponse {
@@ -51,20 +50,20 @@ class ArticleRepository(private val apiService: ApiService) {
         val categoryPart = createPartFromString(categoryId)
         val userPart = createPartFromString(userId)!!
         val statusPart = createPartFromString(status)!!
-        val tagsPart = createPartFromString(tags) // <--- Convert Tags
+        val tagsPart = createPartFromString(tags)
         val imageParts = prepareImageParts(imageUris, context)
 
         return apiService.addArticle(titlePart, contentPart, categoryPart, userPart, statusPart, tagsPart, imageParts)
     }
 
-    // Update Article (Update Tags)
+    // Update Article
     suspend fun updateArticle(
         articleId: Int,
         title: String,
         content: String?,
         categoryId: String?,
         status: String,
-        tags: String?, // <--- TAGS
+        tags: String?,
         newImageUris: List<Uri>,
         deletedImagesJson: String?,
         context: Context
@@ -73,7 +72,7 @@ class ArticleRepository(private val apiService: ApiService) {
         val contentPart = createPartFromString(content)
         val categoryPart = createPartFromString(categoryId)
         val statusPart = createPartFromString(status)!!
-        val tagsPart = createPartFromString(tags) // <--- Convert Tags
+        val tagsPart = createPartFromString(tags)
         val deletedPart = createPartFromString(deletedImagesJson)
         val imageParts = prepareImageParts(newImageUris, context)
 

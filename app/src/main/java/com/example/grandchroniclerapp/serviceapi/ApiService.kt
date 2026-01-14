@@ -18,7 +18,7 @@ interface ApiService {
     suspend fun getArticles(
         @Query("q") query: String? = null,
         @Query("category_id") categoryId: Int? = null,
-        @Query("page") page: Int = 1
+        @Query("page") page: Int = 1 // Pagination
     ): ArticleResponse
 
     @GET("categories")
@@ -42,7 +42,7 @@ interface ApiService {
         @Part("category_id") categoryId: RequestBody?,
         @Part("user_id") userId: RequestBody,
         @Part("status") status: RequestBody,
-        @Part("tags") tags: RequestBody?, // <--- TAMBAHAN TAGS
+        @Part("tags") tags: RequestBody?,
         @Part images: List<MultipartBody.Part>
     ): AddArticleResponse
 
@@ -54,7 +54,7 @@ interface ApiService {
         @Part("content") content: RequestBody?,
         @Part("category_id") categoryId: RequestBody?,
         @Part("status") status: RequestBody,
-        @Part("tags") tags: RequestBody?, // <--- TAMBAHAN TAGS
+        @Part("tags") tags: RequestBody?,
         @Part images: List<MultipartBody.Part>,
         @Part("deleted_images") deletedImages: RequestBody? = null
     ): AddArticleResponse

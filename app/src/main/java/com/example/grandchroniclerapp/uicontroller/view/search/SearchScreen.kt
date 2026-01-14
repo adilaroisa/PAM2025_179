@@ -21,7 +21,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -41,11 +40,21 @@ import com.example.grandchroniclerapp.viewmodel.search.SearchViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
-    viewModel: SearchViewModel = viewModel(factory = PenyediaViewModel.Factory),
-    onDetailClick: (Int) -> Unit = {}
+    initialQuery: String? = null, // Tambahan parameter
+    onDetailClick: (Int) -> Unit,
+    viewModel: SearchViewModel = viewModel(factory = PenyediaViewModel.Factory)
 ) {
     val focusManager = LocalFocusManager.current
     val uiState = viewModel.searchUiState
+
+    // Trigger pencarian otomatis jika ada initialQuery (dari Tag)
+    LaunchedEffect(initialQuery) {
+        if (!initialQuery.isNullOrBlank()) {
+            viewModel.updateQuery(initialQuery)
+            // Asumsi viewModel.updateQuery atau state-nya memicu pencarian
+            // Jika tidak, panggil fungsi search viewModel di sini
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         // --- SEARCH BAR ---
@@ -92,9 +101,7 @@ fun SearchScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 ) {
                     if (viewModel.searchQuery.isNotEmpty()) {
-                        IconButton(onClick = { viewModel.updateQuery("") }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali")
-                        }
+                        // Tombol back kecil di hasil pencarian (opsional)
                     }
                     Text(text = "Hasil Pencarian:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 }
@@ -109,15 +116,14 @@ fun SearchScreen(
                     }
                 } else {
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(2), // Tetap 2 kolom
+                        columns = GridCells.Fixed(2),
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(uiState.articles) { article ->
-                            // PANGGIL KARTU KHUSUS SEARCH DI SINI
                             SearchArticleCard(
                                 article = article,
-                                searchQuery = viewModel.searchQuery, // Kirim query user
+                                searchQuery = viewModel.searchQuery,
                                 onClick = { onDetailClick(article.article_id) }
                             )
                         }
@@ -125,7 +131,7 @@ fun SearchScreen(
                 }
             }
             is SearchUiState.Idle -> {
-                // --- TAMPILAN AWAL: KATEGORI ---
+                // TAMPILAN AWAL: KATEGORI
                 Text(text = "Jelajahi Kategori", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -149,13 +155,13 @@ fun SearchScreen(
     }
 }
 
-// --- KOMPONEN LOKAL DI DALAM FILE INI (SUPAYA MENYATU) ---
+// --- KOMPONEN PENDUKUNG ---
 
 @Composable
 fun CategoryCard(categoryName: String, onClick: () -> Unit) {
     Card(
         onClick = onClick,
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE0E0)), // Warna Peach/Pink lembut
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE0E0)),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.height(60.dp).fillMaxWidth()
     ) {
@@ -170,7 +176,6 @@ fun CategoryCard(categoryName: String, onClick: () -> Unit) {
     }
 }
 
-// --- KARTU KHUSUS SEARCH DENGAN HIGHLIGHT SNIPPET ---
 @Composable
 fun SearchArticleCard(
     article: Article,
@@ -178,15 +183,12 @@ fun SearchArticleCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column {
-            // Gambar Thumbnail
             if (article.images.isNotEmpty()) {
                 val imgUrl = if (article.images[0].startsWith("http")) article.images[0] else "http://10.0.2.2:3000/uploads/${article.images[0]}"
                 AsyncImage(
@@ -200,7 +202,6 @@ fun SearchArticleCard(
             }
 
             Column(modifier = Modifier.padding(12.dp)) {
-                // Judul
                 Text(
                     text = article.title,
                     style = MaterialTheme.typography.titleSmall,
@@ -208,17 +209,14 @@ fun SearchArticleCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // --- BAGIAN AJAIB: SNIPPET ---
-                // Kita panggil fungsi helper di bawah untuk bikin snippet
+                // Snippet Highlight
                 val snippet = remember(article.content, searchQuery) {
                     generateSearchSnippet(article.content, searchQuery)
                 }
-
                 Text(
-                    text = snippet, // Ini teks yang sudah di-highlight
+                    text = snippet, // Menggunakan AnnotatedString
                     style = MaterialTheme.typography.bodySmall,
                     fontSize = 11.sp,
                     color = Color.Gray,
@@ -231,44 +229,26 @@ fun SearchArticleCard(
     }
 }
 
-// --- FUNGSI HELPER (LOGIC HIGHLIGHT) ---
-// Disatukan di file ini sesuai permintaan
-fun generateSearchSnippet(content: String, query: String): AnnotatedString {
-    // 1. Jika query kosong, ambil 100 huruf pertama saja
-    if (query.isBlank()) {
-        return buildAnnotatedString { append(content.take(80) + "...") }
-    }
-
-    // 2. Cari posisi kata kunci
+// Fungsi generateSearchSnippet sama seperti sebelumnya
+fun generateSearchSnippet(content: String, query: String): androidx.compose.ui.text.AnnotatedString {
+    if (query.isBlank()) return buildAnnotatedString { append(content.take(80) + "...") }
     val index = content.indexOf(query, ignoreCase = true)
-
-    // 3. Jika tidak ketemu
     if (index == -1) return buildAnnotatedString { append(content.take(80) + "...") }
-
-    // 4. Tentukan batas potong (30 huruf sebelum & sesudah agar muat di card)
     val start = maxOf(0, index - 30)
     val end = minOf(content.length, index + query.length + 50)
-
     val snippetRaw = content.substring(start, end)
-
-    // 5. Bikin Text Cantik (Highlight)
     return buildAnnotatedString {
         if (start > 0) append("... ")
-
         val relativeIndex = snippetRaw.indexOf(query, ignoreCase = true)
         if (relativeIndex != -1) {
-            append(snippetRaw.substring(0, relativeIndex)) // Sebelum
-
-            // HIGHLIGHT KATA KUNCI (Bold + Biru)
+            append(snippetRaw.substring(0, relativeIndex))
             withStyle(style = SpanStyle(fontWeight = FontWeight.ExtraBold, color = PastelBluePrimary, background = Color(0xFFE3F2FD))) {
                 append(snippetRaw.substring(relativeIndex, relativeIndex + query.length))
             }
-
-            append(snippetRaw.substring(relativeIndex + query.length)) // Sesudah
+            append(snippetRaw.substring(relativeIndex + query.length))
         } else {
             append(snippetRaw)
         }
-
         if (end < content.length) append("...")
     }
 }

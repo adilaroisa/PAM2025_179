@@ -40,6 +40,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun DetailArticleScreen(
     navigateBack: () -> Unit,
+    onTagClick: (String) -> Unit, // Callback klik Tag
     viewModel: DetailArticleViewModel = viewModel(factory = PenyediaViewModel.Factory)
 ) {
     val uiState = viewModel.detailUiState
@@ -88,13 +89,7 @@ fun DetailArticleScreen(
                             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                                 val rawUrl = article.images[page]
                                 val fullUrl = if (rawUrl.startsWith("http")) rawUrl else "http://10.0.2.2:3000/uploads/$rawUrl"
-
-                                AsyncImage(
-                                    model = fullUrl,
-                                    contentDescription = null,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
+                                AsyncImage(model = fullUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             }
 
                             if (article.images.size > 1) {
@@ -123,65 +118,51 @@ fun DetailArticleScreen(
                         }
                     }
 
-                    // --- 2. KONTEN UTAMA ---
+                    // --- 2. KONTEN ARTIKEL ---
                     Column(modifier = Modifier.padding(16.dp)) {
-                        // Kategori
                         Text(article.category_name ?: "Tanpa Kategori", color = PastelBluePrimary, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
                         Spacer(Modifier.height(8.dp))
-
-                        // Judul
                         Text(article.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(16.dp))
 
-                        // Metadata (Penulis | Tanggal | Views)
+                        // Metadata
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Person, null, Modifier.size(16.dp), tint = Color.Gray)
                             Spacer(Modifier.width(4.dp))
                             Text(article.author_name ?: "Unknown", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-
                             Spacer(Modifier.width(16.dp))
-
                             Icon(Icons.Default.CalendarToday, null, Modifier.size(16.dp), tint = Color.Gray)
                             Spacer(Modifier.width(4.dp))
                             Text(article.published_at?.take(10) ?: "Draft", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-
                             Spacer(Modifier.width(16.dp))
-
                             Icon(Icons.Default.Visibility, null, Modifier.size(16.dp), tint = Color.Gray)
                             Spacer(Modifier.width(4.dp))
                             Text("${article.views_count} x Dilihat", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
 
-                        // --- 3. TAGS / HASHTAG (PINDAH KE ATAS) ---
-                        // Sekarang posisinya di sini: Di bawah Metadata, di atas Divider
+                        // --- 3. TAGS / HASHTAG (POSISI ATAS) ---
                         if (!article.tags.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(16.dp))
-
                             val tagList = article.tags.split(" ", "\n").filter { it.isNotBlank() }
-
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 items(tagList) { tag ->
                                     SuggestionChip(
-                                        onClick = { },
+                                        onClick = { onTagClick(tag) }, // Navigasi ke Search
                                         label = { Text(tag, style = MaterialTheme.typography.labelSmall) },
                                         colors = SuggestionChipDefaults.suggestionChipColors(
                                             containerColor = PastelBluePrimary.copy(alpha = 0.1f),
                                             labelColor = PastelBluePrimary
                                         ),
-                                        // Menggunakan BorderStroke agar aman dari error versi
+                                        // Fix Border Error
                                         border = BorderStroke(1.dp, PastelBluePrimary.copy(alpha = 0.5f)),
-                                        shape = RoundedCornerShape(100) // Membuat chip lebih bulat cantik
+                                        shape = RoundedCornerShape(100)
                                     )
                                 }
                             }
                         }
-                        // ------------------------------------------
 
                         Divider(Modifier.padding(vertical = 20.dp))
-
-                        // Isi Artikel
                         Text(article.content, style = MaterialTheme.typography.bodyLarge, lineHeight = 28.sp)
-
                         Spacer(modifier = Modifier.height(50.dp))
                     }
                 }
