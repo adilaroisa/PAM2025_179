@@ -9,7 +9,6 @@ data class Article(
     val category_id: Int,
     val title: String,
     val content: String,
-    // Field utama untuk menampung banyak gambar
     val images: List<String> = emptyList(),
     val captions: List<String> = emptyList(),
     val created_at: String? = null,
@@ -20,7 +19,6 @@ data class Article(
     val tags: String? = null,
     val status: String
 ) {
-    // --- HELPER PROPERTY
     // Jika list kosong, akan return null.
     val image: String?
         get() = images.firstOrNull()

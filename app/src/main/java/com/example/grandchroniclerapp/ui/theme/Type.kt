@@ -10,13 +10,13 @@ import com.example.grandchroniclerapp.R
 
 // --- DEFINISI FONT ---
 
-// 1. Font untuk JUDUL BESAR (Nuansa Roman/Epic)
+// 1. Font untuk JUDUL BESAR
 val Cinzel = FontFamily(
     Font(R.font.cinzel_regular, FontWeight.Normal),
     Font(R.font.cinzel_bold, FontWeight.Bold)
 )
 
-// 2. Font untuk Body/Teks Biasa (Bersih & Modern)
+// 2. Font untuk Body/Teks Biasa
 val Lato = FontFamily(
     Font(R.font.lato_regular, FontWeight.Normal),
     Font(R.font.lato_bold, FontWeight.Bold)
@@ -27,11 +27,11 @@ val Typography = Typography(
 
     // JUDUL UTAMA (Halaman Login, Header Home)
     headlineLarge = TextStyle(
-        fontFamily = Cinzel, // Pake Cinzel biar "GRAND"
+        fontFamily = Cinzel,
         fontWeight = FontWeight.Bold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
-        letterSpacing = 2.sp // Kasih spasi antar huruf biar makin mewah
+        letterSpacing = 2.sp
     ),
 
     // JUDUL HALAMAN (TopAppBar, Nama User)

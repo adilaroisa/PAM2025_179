@@ -51,7 +51,7 @@ fun PengelolaHalaman(
     navController: NavHostController = rememberNavController(),
     modifier: Modifier = Modifier
 ) {
-    // --- [LOGIKA CEK SESI USER] ---
+    // --- LOGIKA CEK SESI USER ---
     val context = LocalContext.current
     val userPreferences = remember { UserPreferences(context) }
     val userIdState by userPreferences.getUserId.collectAsState(initial = null)
@@ -66,7 +66,7 @@ fun PengelolaHalaman(
     // Start Destination
     val startDestination = if (userIdState != -1) DestinasiHome.route else DestinasiLogin.route
 
-    // --- [NAVIGASI UTAMA] ---
+    // --- NAVIGASI UTAMA ---
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -183,7 +183,6 @@ fun PengelolaHalaman(
                         navController.navigate(DestinasiAbout.route)
                     },
                     onLogout = {
-                        // Saat logout, kembalikan ke Login dan hapus semua history
                         navController.navigate(DestinasiLogin.route) {
                             popUpTo(0) { inclusive = true }
                         }

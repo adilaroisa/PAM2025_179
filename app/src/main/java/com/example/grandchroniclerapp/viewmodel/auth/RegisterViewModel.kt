@@ -38,7 +38,6 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
     fun register() {
         // --- VALIDASI INPUT ---
 
-        // Gunakan .trim() agar spasi tidak sengaja terhitung
         val cleanName = fullName.trim()
         val cleanEmail = email.trim()
         val cleanPassword = password.trim()
@@ -48,14 +47,13 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
             return
         }
 
-        //  Cek apakah mengandung '@' dan '.', bukan endsWith
-        if (!cleanEmail.contains("@") || !cleanEmail.contains(".")) {
-            registerUiState = RegisterUiState.Error("Format Email Salah")
+        if (!cleanEmail.matches(Regex("^.+@.+\\..+$"))) {
+            registerUiState = RegisterUiState.Error("Format Email Salah (contoh: user@domain.com)")
             return
         }
 
-        if (cleanPassword.length < 6) {
-            registerUiState = RegisterUiState.Error("Password minimal 6 karakter")
+        if (cleanPassword.length < 8) {
+            registerUiState = RegisterUiState.Error("Password minimal 8 karakter")
             return
         }
 
@@ -63,7 +61,6 @@ class RegisterViewModel(private val authRepository: AuthRepository) : ViewModel(
         viewModelScope.launch {
             registerUiState = RegisterUiState.Loading
             try {
-                // Gunakan data yang sudah di-trim
                 val request = RegisterRequest(
                     full_name = cleanName,
                     email = cleanEmail,

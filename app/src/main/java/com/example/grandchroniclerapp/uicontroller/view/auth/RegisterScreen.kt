@@ -57,12 +57,10 @@ fun RegisterScreen(
 
     // --- LOGIKA VALIDASI ---
 
-    // 1. Nama: HANYA Huruf, Spasi, dan Titik
-    // Regex: ^[a-zA-Z .]*$
     val isNameValid = viewModel.fullName.isNotBlank() && viewModel.fullName.matches(Regex("^[a-zA-Z .]*$"))
 
     // 2. Email
-    val isEmailValid = viewModel.email.contains("@") && viewModel.email.contains(".")
+    val isEmailValid = viewModel.email.matches(Regex("^.+@.+\\..+$"))
 
     // 3. Password
     val hasLetter = viewModel.password.any { it.isLetter() }
@@ -169,6 +167,14 @@ fun RegisterScreen(
                             if (showErrors && !isEmailValid) Icon(Icons.Default.Warning, null, tint = SoftError)
                         }
                     )
+                    if (showErrors && !isEmailValid) {
+                        Text(
+                            text = "Format: contoh@email.com",
+                            color = SoftError,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.align(Alignment.Start).padding(start = 8.dp)
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -235,7 +241,7 @@ fun RegisterScreen(
                             } else if (!isNameValid) {
                                 scope.launch { snackbarHostState.showSnackbar("Nama hanya boleh huruf dan titik (.)") }
                             } else if (!isEmailValid) {
-                                scope.launch { snackbarHostState.showSnackbar("Format email salah") }
+                                scope.launch { snackbarHostState.showSnackbar("Format email salah (contoh: user@domain.com)") }
                             } else if (!isPasswordValid) {
                                 scope.launch { snackbarHostState.showSnackbar("Password min. 8 karakter, kombinasi huruf & angka") }
                             } else if (!isTermsAccepted) {

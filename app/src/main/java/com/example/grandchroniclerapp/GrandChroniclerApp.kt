@@ -9,7 +9,6 @@ class GrandChroniclerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Kirim 'this' sebagai context ke DefaultAppContainer
         container = DefaultAppContainer(this)
     }
 }

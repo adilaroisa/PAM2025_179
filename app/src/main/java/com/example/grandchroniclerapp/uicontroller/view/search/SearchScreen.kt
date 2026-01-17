@@ -20,15 +20,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
@@ -104,7 +110,7 @@ fun SearchScreen(
                 }
             }
 
-            // TAMPILAN PILIH KATEGORI
+            // TAMPILAN PILIH KATEGORI (AWAL)
             is SearchUiState.Idle -> {
                 Text("Jelajahi Kategori", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = BlackText)
                 Spacer(Modifier.height(12.dp))
@@ -137,7 +143,6 @@ fun SearchScreen(
 
             // HASIL PENCARIAN
             is SearchUiState.Success -> {
-                // Header Hasil
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
                     val headerText = if (viewModel.selectedCategory != null) "Kategori: ${viewModel.selectedCategory!!.category_name}" else "Hasil Pencarian:"
                     Text(text = headerText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -152,21 +157,25 @@ fun SearchScreen(
                         }
                     }
                 } else {
-                    LazyVerticalStaggeredGrid(
-                        columns = StaggeredGridCells.Fixed(2),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalItemSpacing = 16.dp,
-                        contentPadding = PaddingValues(bottom = 100.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(uiState.articles, key = { it.article_id }) { article ->
-                            val isPinterestStyle = article.category_id == 2
+                    // Paksa Grid mulai dari Kiri (LTR)
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        LazyVerticalStaggeredGrid(
+                            columns = StaggeredGridCells.Fixed(2),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalItemSpacing = 16.dp,
+                            contentPadding = PaddingValues(bottom = 100.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(uiState.articles, key = { it.article_id }) { article ->
+                                val isPinterestStyle = article.category_id == 2
 
-                            SearchStaggeredCard(
-                                article = article,
-                                isPinterestStyle = isPinterestStyle,
-                                onClick = { onDetailClick(article.article_id) }
-                            )
+                                SearchStaggeredCard(
+                                    article = article,
+                                    isPinterestStyle = isPinterestStyle,
+                                    searchQuery = if(viewModel.selectedCategory == null) viewModel.searchQuery else "",
+                                    onClick = { onDetailClick(article.article_id) }
+                                )
+                            }
                         }
                     }
                 }
@@ -185,14 +194,39 @@ fun SearchScreen(
 fun SearchStaggeredCard(
     article: Article,
     isPinterestStyle: Boolean,
+    searchQuery: String,
     onClick: () -> Unit
 ) {
     val thumbnailImage = article.images.firstOrNull() ?: article.image
 
+    val fullContent = article.content ?: ""
+
+    // --- LOGIKA KONTEN DITAMPILKAN & POTONGANNYA ---
+    val (displayContent, shouldShowContent) = remember(fullContent, searchQuery) {
+        if (searchQuery.isBlank()) {
+            // UPDATED: Saat Kategori (query kosong), TIDAK perlu tampilkan isi konten.
+            // Biar seragam dengan Home Screen yang cuma Gambar & Judul.
+            "" to false
+        } else {
+            // Saat Search Teks: Cek apakah ada match di body
+            val matchIndex = fullContent.indexOf(searchQuery, ignoreCase = true)
+            if (matchIndex != -1) {
+                // ADA MATCH: Potong teks biar match-nya kelihatan di awal
+                val startIndex = (matchIndex - 30).coerceAtLeast(0)
+                val snippet = fullContent.substring(startIndex)
+
+                val finalSnippet = if (startIndex > 0) "...$snippet" else snippet
+                finalSnippet to true
+            } else {
+                "" to false
+            }
+        }
+    }
+
     val sizeModifier = if (isPinterestStyle) {
         Modifier.fillMaxWidth().wrapContentHeight()
     } else {
-        Modifier.fillMaxWidth().height(260.dp)
+        Modifier.fillMaxWidth().wrapContentHeight()
     }
 
     val badgeColor = getCategoryColor(article.category_id)
@@ -204,6 +238,7 @@ fun SearchStaggeredCard(
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column {
+            // --- GAMBAR ---
             if (thumbnailImage != null) {
                 val imgUrl = if (thumbnailImage.startsWith("http")) thumbnailImage else "http://10.0.2.2:3000/uploads/$thumbnailImage"
 
@@ -232,14 +267,14 @@ fun SearchStaggeredCard(
                     modifier = imageModifier.background(Color(0xFFF5F5F5))
                 )
             } else {
-                Box(modifier = Modifier.fillMaxWidth().height(140.dp).background(Color(0xFFEEEEEE)), contentAlignment = Alignment.Center) {
+                Box(modifier = Modifier.fillMaxWidth().height(100.dp).background(Color(0xFFEEEEEE)), contentAlignment = Alignment.Center) {
                     Text("No Image", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
                 }
             }
 
             Column(modifier = Modifier.padding(12.dp)) {
 
-                // Badge Kategori dengan warna dinamis
+                // --- KATEGORI ---
                 Surface(color = badgeColor, shape = RoundedCornerShape(6.dp)) {
                     Text(
                         text = article.category_name ?: "Umum",
@@ -251,17 +286,35 @@ fun SearchStaggeredCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // --- JUDUL ---
+                val highlightedTitle = highlightText(text = article.title, query = searchQuery, isTitle = true)
                 Text(
-                    text = article.title,
+                    text = highlightedTitle,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = BlackText,
-                    maxLines = 3,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                // --- ISI KONTEN  ---
+                if (shouldShowContent) {
+                    Spacer(modifier = Modifier.height(4.dp))
 
+                    val highlightedContent = highlightText(text = displayContent, query = searchQuery, isTitle = false)
+                    Text(
+                        text = highlightedContent,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.DarkGray,
+                        maxLines = 4,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 16.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // --- PENULIS ---
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Person, null, modifier = Modifier.size(12.dp), tint = Color.Gray)
                     Spacer(Modifier.width(4.dp))
@@ -278,6 +331,38 @@ fun SearchStaggeredCard(
     }
 }
 
+// --- HELPER FUNGSI HIGHLIGHT ---
+@Composable
+fun highlightText(text: String, query: String, isTitle: Boolean): AnnotatedString {
+    return remember(text, query) {
+        if (query.isBlank()) {
+            buildAnnotatedString { append(text) }
+        } else {
+            buildAnnotatedString {
+                val lowerText = text.lowercase()
+                val lowerQuery = query.lowercase()
+                var startIndex = 0
+
+                while (true) {
+                    val index = lowerText.indexOf(lowerQuery, startIndex)
+                    if (index == -1) {
+                        append(text.substring(startIndex))
+                        break
+                    }
+
+                    append(text.substring(startIndex, index))
+
+                    withStyle(SpanStyle(background = Color(0xFFFFF176), fontWeight = if (isTitle) FontWeight.ExtraBold else FontWeight.Bold)) {
+                        append(text.substring(index, index + query.length))
+                    }
+
+                    startIndex = index + query.length
+                }
+            }
+        }
+    }
+}
+
 fun getCategoryColor(categoryId: Int): Color {
     return when (categoryId) {
         1 -> Color(0xFFE3F2FD)
@@ -286,16 +371,6 @@ fun getCategoryColor(categoryId: Int): Color {
         4 -> Color(0xFFFCE4EC)
         5 -> Color(0xFFF3E5F5)
         6 -> Color(0xFFFFF3E0)
-        else -> {
-            when (categoryId % 6) {
-                1 -> Color(0xFFE3F2FD)
-                2 -> Color(0xFFFFF9C4)
-                3 -> Color(0xFFE8F5E9)
-                4 -> Color(0xFFFCE4EC)
-                5 -> Color(0xFFF3E5F5)
-                0 -> Color(0xFFFFF3E0)
-                else -> Color(0xFFF5F5F5)
-            }
-        }
+        else -> Color(0xFFF5F5F5)
     }
 }

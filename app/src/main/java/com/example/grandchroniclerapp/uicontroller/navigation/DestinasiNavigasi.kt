@@ -19,7 +19,7 @@ object DestinasiRegister : DestinasiNavigasi {
 
 object DestinasiHome : DestinasiNavigasi {
     override val route = "home"
-    override val titleRes = R.string.home_title // Atau R.string.app_name
+    override val titleRes = R.string.home_title
 }
 
 object DestinasiSearch : DestinasiNavigasi {
@@ -46,7 +46,7 @@ object DestinasiDetail : DestinasiNavigasi {
 
 object DestinasiEditArticle : DestinasiNavigasi {
     override val route = "edit_article"
-    override val titleRes = R.string.edit_article // Ini jadi benar (Int ketemu Int)
+    override val titleRes = R.string.edit_article
 
     val articleId = "articleId"
     val routeWithArgs = "$route/{$articleId}"

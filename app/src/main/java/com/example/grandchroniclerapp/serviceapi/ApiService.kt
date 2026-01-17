@@ -18,7 +18,7 @@ interface ApiService {
     suspend fun getArticles(
         @Query("q") query: String? = null,
         @Query("category_id") categoryId: Int? = null,
-        @Query("page") page: Int = 1 // Pagination
+        @Query("page") page: Int = 1
     ): ArticleResponse
 
     @GET("categories")
@@ -57,7 +57,6 @@ interface ApiService {
         @Part("category_id") categoryId: RequestBody?,
         @Part("status") status: RequestBody,
         @Part("tags") tags: RequestBody?,
-        // TAMBAHAN: Kirim captions
         @Part("captions") captions: RequestBody?,
         @Part images: List<MultipartBody.Part>,
         @Part("deleted_images") deletedImages: RequestBody? = null

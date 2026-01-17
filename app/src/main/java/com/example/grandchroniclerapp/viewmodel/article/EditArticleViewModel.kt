@@ -42,13 +42,9 @@ class EditArticleViewModel(
     var tags by mutableStateOf("")
     var selectedCategory: Category? by mutableStateOf(null)
     var categories: List<Category> by mutableStateOf(emptyList())
-
-    // Gambar Lama (URL + Caption)
     var oldImages = mutableStateListOf<ExistingImageState>()
         private set
     private var deletedImageUrls = mutableListOf<String>()
-
-    // Gambar Baru (Uri + Caption)
     var newImages = mutableStateListOf<NewImageState>()
         private set
 

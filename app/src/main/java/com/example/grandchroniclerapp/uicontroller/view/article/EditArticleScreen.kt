@@ -81,20 +81,20 @@ fun EditArticleScreen(
         }
     }
 
-    // --- DIALOGS (Kode Dialog tetap sama, dipersingkat di sini) ---
-    if (oldImageToDelete != null) { /* ... Dialog Hapus Gambar Lama ... */
+    // --- VALIDASI ---
+    if (oldImageToDelete != null) {
         AlertDialog(onDismissRequest = { oldImageToDelete = null }, title = { Text("Hapus Gambar?") }, confirmButton = { Button(onClick = { viewModel.deleteOldImage(oldImageToDelete!!); oldImageToDelete = null }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) { Text("Hapus") } }, dismissButton = { OutlinedButton(onClick = { oldImageToDelete = null }) { Text("Batal") } })
     }
-    if (newImageToDelete != null) { /* ... Dialog Hapus Gambar Baru ... */
+    if (newImageToDelete != null) {
         AlertDialog(onDismissRequest = { newImageToDelete = null }, title = { Text("Hapus Upload?") }, confirmButton = { Button(onClick = { viewModel.removeNewImage(newImageToDelete!!); newImageToDelete = null }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) { Text("Hapus") } }, dismissButton = { OutlinedButton(onClick = { newImageToDelete = null }) { Text("Batal") } })
     }
-    if (showDiscardDialog) { /* ... Dialog Discard ... */
+    if (showDiscardDialog) {
         AlertDialog(onDismissRequest = { showDiscardDialog = false }, title = { Text("Keluar?", color = SoftError) }, text = { Text("Perubahan belum disimpan.") }, confirmButton = { Button(onClick = { showDiscardDialog = false; navigateBack() }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) { Text("Keluar") } }, dismissButton = { OutlinedButton(onClick = { showDiscardDialog = false }) { Text("Lanjut") } })
     }
-    if (showPublishConfirmDialog) { /* ... Dialog Publish ... */
+    if (showPublishConfirmDialog) {
         AlertDialog(onDismissRequest = { showPublishConfirmDialog = false }, title = { Text("Update Artikel?") }, text = { Text("Artikel akan diperbarui sesuai perubahan terbaru.") }, confirmButton = { Button(onClick = { showPublishConfirmDialog = false; viewModel.submitUpdate(context, articleId, "Published") }) { Text("Update") } }, dismissButton = { TextButton(onClick = { showPublishConfirmDialog = false }) { Text("Batal") } })
     }
-    if (showDraftConfirmDialog) { /* ... Dialog Draft ... */
+    if (showDraftConfirmDialog) {
         AlertDialog(onDismissRequest = { showDraftConfirmDialog = false }, title = { Text("Simpan Draf?") }, text = { Text("Simpan perubahan sebagai draf.") }, confirmButton = { Button(onClick = { showDraftConfirmDialog = false; viewModel.submitUpdate(context, articleId, "Draft") }) { Text("Simpan") } }, dismissButton = { TextButton(onClick = { showDraftConfirmDialog = false }) { Text("Batal") } })
     }
 
@@ -117,7 +117,7 @@ fun EditArticleScreen(
                     }
                     Spacer(Modifier.height(8.dp))
 
-                    // 1. GAMBAR LAMA (HORIZONTAL SCROLL)
+                    // 1. GAMBAR LAMA
                     if (viewModel.oldImages.isNotEmpty()) {
                         Text("Foto Saat Ini:", fontSize = 12.sp, color = Color.Gray)
                         Spacer(Modifier.height(8.dp))
@@ -261,7 +261,7 @@ fun EditArticleScreen(
             }
         }
 
-        // HEADER & SNACKBAR (Sama seperti sebelumnya)
+        // HEADER & SNACKBAR
         Row(Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { onBackAttempt() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
             Text("Edit Artikel", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

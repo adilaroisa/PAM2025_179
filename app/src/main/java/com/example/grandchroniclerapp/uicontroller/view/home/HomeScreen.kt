@@ -46,7 +46,7 @@ fun HomeScreen(
     // State Grid
     val gridState = rememberLazyStaggeredGridState()
 
-    // Infinite Scroll
+    // Infinite Scroll Logic
     val isAtBottom by remember {
         derivedStateOf {
             val layoutInfo = gridState.layoutInfo
@@ -56,6 +56,12 @@ fun HomeScreen(
         }
     }
 
+    // --- REFRESH OTOMATIS SAAT MASUK LAYAR ---
+    LaunchedEffect(Unit) {
+        viewModel.loadArticles(reset = true)
+    }
+
+    // --- LOGIKA PAGINATION (INFINITE SCROLL) ---
     LaunchedEffect(isAtBottom) {
         if (isAtBottom) {
             viewModel.loadArticles(reset = false)

@@ -175,7 +175,7 @@ fun InsertArticleScreen(
                     ) {
                         Text("Foto Artikel", fontWeight = FontWeight.Bold, color = PastelBluePrimary, style = MaterialTheme.typography.titleMedium)
 
-                        // TOMBOL TAMBAH (Satu-satunya cara menambah foto sekarang)
+                        // TOMBOL TAMBAH GAMBAR
                         TextButton(onClick = { multipleImagePicker.launch("image/*") }) {
                             Icon(Icons.Default.AddPhotoAlternate, null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(4.dp))
@@ -210,7 +210,7 @@ fun InsertArticleScreen(
                                                 contentScale = ContentScale.Crop
                                             )
 
-                                            // Tombol Hapus (Pojok Kanan Atas)
+                                            // Tombol Hapus
                                             IconButton(
                                                 onClick = { imageToDelete = item },
                                                 modifier = Modifier

@@ -118,7 +118,7 @@ fun DetailArticleScreen(
                                 )
                             }
 
-                            // --- LOGIKA TOMBOL INFO (i) atau caption ---
+                            // --- LOGIKA caption ---
                             val currentPageCaption = if (pagerState.currentPage < article.captions.size) article.captions[pagerState.currentPage] else ""
 
                             if (currentPageCaption.isNotBlank()) {
@@ -191,7 +191,6 @@ fun DetailArticleScreen(
                                 }
                             }
                         } else {
-                            // Opsional: Jika user geser ke foto tanpa caption, otomatis tutup toggle-nya agar rapi
                             LaunchedEffect(pagerState.currentPage) {
                                 showCaption = false
                             }

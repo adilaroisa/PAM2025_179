@@ -27,7 +27,6 @@ class SearchViewModel(private val repository: ArticleRepository) : ViewModel() {
     var searchQuery by mutableStateOf("")
         private set
 
-    // Menyimpan kategori yang sedang dipilih
     var selectedCategory: Category? by mutableStateOf(null)
         private set
 
@@ -83,8 +82,6 @@ class SearchViewModel(private val repository: ArticleRepository) : ViewModel() {
         searchUiState = SearchUiState.Loading
         viewModelScope.launch {
             try {
-                // Jika selectedCategory ada -> Kirim categoryId
-                // Jika tidak ada -> Kirim searchQuery (text)
                 val response = repository.getArticles(
                     query = if (selectedCategory == null) searchQuery else null,
                     categoryId = selectedCategory?.category_id

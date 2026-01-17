@@ -55,7 +55,7 @@ fun ProfileScreen(
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     val tabs = listOf("Terbit", "Draf")
 
-    // Trigger Snackbar saat ada pesan delete
+    // Snackbar
     LaunchedEffect(deleteMessage) {
         deleteMessage?.let { snackbarHostState.showSnackbar(it) }
     }
@@ -175,7 +175,7 @@ fun ProfileScreen(
             FloatingActionButton(onClick = onAddArticle, containerColor = PastelBluePrimary, contentColor = Color.White, shape = CircleShape) { Icon(Icons.Default.Add, "Add") }
         }
 
-        // --- SNACKBAR CUSTOM (PERBAIKAN DI SINI) ---
+        // --- SNACKBAR CUSTOM  ---
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             SnackbarHost(hostState = snackbarHostState) { data ->
                 val isSuccess = data.visuals.message.contains("Berhasil", true) || data.visuals.message.contains("Sukses", true)

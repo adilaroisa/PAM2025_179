@@ -21,7 +21,7 @@ private val DarkColorScheme = darkColorScheme(
     tertiary = PastelBlueDark
 )
 
-// --- DEFINISI TEMA LIGHT (INI YANG UTAMA) ---
+// --- DEFINISI TEMA LIGHT ---
 private val LightColorScheme = lightColorScheme(
 
 
@@ -30,10 +30,10 @@ private val LightColorScheme = lightColorScheme(
     primaryContainer = PastelBlueLight,
     onPrimaryContainer = BlackText,
 
-    // 2. Warna Sekunder (Tombol Draf, Ikon, Floating Button)
+    // 2. Warna Sekunder untuk Tombol Draf, Ikon, dan Floating Button
     secondary = PastelPinkSecondary,
     onSecondary = WhiteBackground,
-    secondaryContainer = PastelPinkContainer, // Background label kategori
+    secondaryContainer = PastelPinkContainer,
     onSecondaryContainer = BlackText,
 
     // 3. Background Layar
@@ -43,7 +43,7 @@ private val LightColorScheme = lightColorScheme(
     // 4. Surface (Warna Kartu Artikel)
     surface = WhiteBackground,
     onSurface = BlackText,
-    surfaceVariant = PastelBlueLight, // Warna variasi (misal input field)
+    surfaceVariant = PastelBlueLight,
     onSurfaceVariant = BlackText,
 
     // 5. Error
@@ -53,7 +53,6 @@ private val LightColorScheme = lightColorScheme(
 @Composable
 fun GrandChroniclerAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color dimatikan agar warna pastel kita tidak tertimpa warna HP user
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
@@ -66,7 +65,6 @@ fun GrandChroniclerAppTheme(
         else -> LightColorScheme
     }
 
-    // Mengatur warna Status Bar HP agar senada
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -78,7 +76,7 @@ fun GrandChroniclerAppTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography, // Pastikan file Typography.kt aman (default bawaan project)
+        typography = Typography,
         content = content
     )
 }

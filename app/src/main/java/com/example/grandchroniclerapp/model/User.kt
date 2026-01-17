@@ -18,12 +18,3 @@ data class UserDetailResponse(
     val message: String? = null,
     val data: User? = null
 )
-
-@Serializable
-data class UpdateUserRequest(
-    val full_name: String,
-    val bio: String? = null,
-    val email: String,
-    val password: String? = null,
-    val profile_photo: String? = null
-)

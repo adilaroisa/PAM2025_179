@@ -41,12 +41,9 @@ class DetailArticleViewModel(
                 // Panggil repository
                 val response = repository.getArticleDetail(articleId)
 
-                // PERBAIKAN PENTING:
-                // Cek status TRUE DAN datanya TIDAK NULL
                 if (response.status && response.data != null) {
                     detailUiState = DetailUiState.Success(response.data)
                 } else {
-                    // Jika status false atau data null, anggap error
                     detailUiState = DetailUiState.Error(response.message ?: "Gagal memuat data artikel")
                 }
             } catch (e: IOException) {

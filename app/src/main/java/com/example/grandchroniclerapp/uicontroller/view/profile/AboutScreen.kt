@@ -84,7 +84,7 @@ fun AboutScreen(
 
             Spacer(Modifier.height(32.dp))
 
-            // --- BAGIAN 1: PUSAT BANTUAN ---
+            // --- 1. PUSAT BANTUAN ---
             SectionHeader("Pusat Bantuan")
             InfoItem(
                 icon = Icons.Default.QuestionAnswer,
@@ -100,7 +100,7 @@ fun AboutScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // --- BAGIAN 2: PENGEMBANG ---
+            // --- 2. PENGEMBANG ---
             SectionHeader("Pengembang")
             InfoItem(
                 icon = Icons.Default.Person,

@@ -56,21 +56,20 @@ fun LoginScreen(
         }
     }
 
-    // MAIN LAYOUT: Box Paling Luar (Untuk Background & Snackbar)
+    // MAIN LAYOUT: Box Paling Luar untuk Background & Snackbar
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(PastelBluePrimary)
     ) {
-        // STRUKTUR UTAMA: Column (Agar bisa pakai Weight untuk Header & Sheet)
+        // STRUKTUR UTAMA
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // 1. HEADER JUDUL (Area Biru - 35%)
-            // Karena di dalam Column, .weight() sekarang BERFUNGSI
+            // 1. HEADER JUDUL
             Box(
                 modifier = Modifier
-                    .weight(0.35f) // Ambil 35% tinggi layar
+                    .weight(0.35f)
                     .fillMaxWidth(),
                 contentAlignment = Alignment.Center
             ) {
@@ -90,10 +89,10 @@ fun LoginScreen(
                 }
             }
 
-            // 2. SHEET FORM (Area Putih - 65%)
+            // 2. SHEET FORM
             Surface(
                 modifier = Modifier
-                    .weight(0.65f) // Ambil 65% sisanya
+                    .weight(0.65f)
                     .fillMaxWidth(),
                 shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
                 color = Color.White
@@ -187,7 +186,7 @@ fun LoginScreen(
             }
         }
 
-        // 3. SNACKBAR (Tetap di Box Luar agar mengambang di atas)
+        // 3. SNACKBAR
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter) // Posisikan di bawah layar
