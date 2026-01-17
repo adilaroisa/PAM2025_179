@@ -36,6 +36,7 @@ class EditProfileViewModel(
     var currentPhotoUrl by mutableStateOf("")
     var selectedImageUri by mutableStateOf<Uri?>(null)
 
+    // State Awal
     private var initialFullName = ""
     private var initialEmail = ""
     private var initialBio = ""
@@ -55,6 +56,7 @@ class EditProfileViewModel(
                         role = res.data.role ?: "Penulis"
                         currentPhotoUrl = res.data.profile_photo ?: ""
 
+                        // Simpan Snapshot
                         initialFullName = fullName
                         initialEmail = email
                         initialBio = bio
@@ -64,7 +66,15 @@ class EditProfileViewModel(
         }
     }
 
-    fun hasChanges() = fullName != initialFullName || email != initialEmail || bio != initialBio || password.isNotEmpty() || selectedImageUri != null
+    // --- DIRTY CHECK ---
+    fun hasChanges(): Boolean {
+        if (fullName.trim() != initialFullName.trim()) return true
+        if (email.trim() != initialEmail.trim()) return true
+        if (bio.trim() != initialBio.trim()) return true
+        if (password.isNotEmpty()) return true
+        if (selectedImageUri != null) return true
+        return false
+    }
 
     fun submitUpdate(context: Context) {
         if (fullName.isBlank() || email.isBlank()) {

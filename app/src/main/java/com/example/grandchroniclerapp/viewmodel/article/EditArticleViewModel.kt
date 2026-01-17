@@ -42,17 +42,20 @@ class EditArticleViewModel(
     var tags by mutableStateOf("")
     var selectedCategory: Category? by mutableStateOf(null)
     var categories: List<Category> by mutableStateOf(emptyList())
+
     var oldImages = mutableStateListOf<ExistingImageState>()
         private set
     private var deletedImageUrls = mutableListOf<String>()
+
     var newImages = mutableStateListOf<NewImageState>()
         private set
 
-    // State Awal untuk Cek Perubahan
+    // --- State Awal (Untuk Cek Perubahan) ---
     private var initialTitle = ""
     private var initialContent = ""
     private var initialTags = ""
     private var initialCategoryId = 0
+    private var initialOldCaptions: List<String> = emptyList()
 
     val totalImagesCount: Int get() = oldImages.size + newImages.size
 
@@ -70,32 +73,37 @@ class EditArticleViewModel(
     }
 
     fun loadArticleData(articleId: Int) {
+        if (title.isNotEmpty() || initialTitle.isNotEmpty()) return
+
         viewModelScope.launch {
             try {
                 val res = repository.getArticleDetail(articleId)
                 if (res.status && res.data != null) {
                     val article = res.data!!
                     title = article.title
-                    content = article.content
+                    content = article.content ?: ""
                     tags = article.tags ?: ""
 
                     selectedCategory = categories.find { it.category_id == article.category_id }
                         ?: categories.find { it.category_name == article.category_name }
 
                     oldImages.clear()
+                    val tempCaptions = mutableListOf<String>()
                     article.images.forEachIndexed { index, url ->
                         val cap = if (index < article.captions.size) article.captions[index] else ""
                         oldImages.add(ExistingImageState(url, cap))
+                        tempCaptions.add(cap)
                     }
 
                     deletedImageUrls.clear()
                     newImages.clear()
 
-                    // Simpan state awal
+                    // Simpan Snapshot Awal
                     initialTitle = article.title
-                    initialContent = article.content
+                    initialContent = article.content ?: ""
                     initialTags = article.tags ?: ""
                     initialCategoryId = article.category_id
+                    initialOldCaptions = tempCaptions.toList()
                 }
             } catch (e: Exception) {
                 uiState = UploadUiState.Error("Gagal load data")
@@ -104,28 +112,20 @@ class EditArticleViewModel(
         }
     }
 
-    // --- Manipulasi Gambar Lama ---
+    // --- Manipulasi Gambar ---
     fun deleteOldImage(item: ExistingImageState) {
         oldImages.remove(item)
         deletedImageUrls.add(item.url)
     }
     fun updateOldCaption(index: Int, text: String) {
-        if (index in oldImages.indices) {
-            val item = oldImages[index]
-            oldImages[index] = item.copy(caption = text)
-        }
+        if (index in oldImages.indices) oldImages[index] = oldImages[index].copy(caption = text)
     }
-
-    // --- Manipulasi Gambar Baru ---
     fun updateImages(uris: List<Uri>) {
         uris.forEach { newImages.add(NewImageState(it)) }
     }
     fun removeNewImage(item: NewImageState) { newImages.remove(item) }
     fun updateNewCaption(index: Int, text: String) {
-        if (index in newImages.indices) {
-            val item = newImages[index]
-            newImages[index] = item.copy(caption = text)
-        }
+        if (index in newImages.indices) newImages[index] = newImages[index].copy(caption = text)
     }
 
     fun updateTitle(t: String) { title = t }
@@ -133,30 +133,32 @@ class EditArticleViewModel(
     fun updateTags(t: String) { tags = t }
     fun updateCategory(c: Category) { selectedCategory = c }
 
+    // --- DIRTY CHECK ---
     fun hasChanges(): Boolean {
-        // anggap selalu ada perubahan jika user masuk edit mode
-        return true
+        if (title.trim() != initialTitle.trim()) return true
+        if (content.trim() != initialContent.trim()) return true
+        if (tags.trim() != initialTags.trim()) return true
+        if ((selectedCategory?.category_id ?: 0) != initialCategoryId) return true
+        if (newImages.isNotEmpty()) return true
+        if (deletedImageUrls.isNotEmpty()) return true
+
+        if (oldImages.size == initialOldCaptions.size) {
+            oldImages.forEachIndexed { index, img ->
+                if (img.caption != initialOldCaptions[index]) return true
+            }
+        } else {
+            return true
+        }
+        return false
     }
 
     // --- SUBMIT UPDATE ---
     fun submitUpdate(context: Context, articleId: Int, status: String) {
-        // 1. VALIDASI
-        var errorMessage: String? = null
-
         if (title.isBlank()) {
-            errorMessage = "Judul tidak boleh kosong!"
-        } else if (status == "Published") {
-            if (selectedCategory == null) errorMessage = "Pilih kategori untuk terbit!"
-            else if (content.isBlank()) errorMessage = "Isi artikel tidak boleh kosong!"
-        }
-
-        if (errorMessage != null) {
-            uiState = UploadUiState.Error("Validasi Gagal")
-            viewModelScope.launch { _snackbarEvent.send(errorMessage!!) }
+            viewModelScope.launch { _snackbarEvent.send("Judul tidak boleh kosong!") }
             return
         }
 
-        // 2. PROSES UPDATE
         viewModelScope.launch {
             uiState = UploadUiState.Loading
             try {
@@ -176,7 +178,7 @@ class EditArticleViewModel(
                     categoryId = catIdToSend,
                     status = status,
                     tags = tags,
-                    captions = allCaptions, // Kirim list gabungan
+                    captions = allCaptions,
                     newImageUris = newImages.map { it.uri },
                     deletedImagesJson = deletedJson,
                     context = context

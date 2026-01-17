@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.grandchroniclerapp.ui.theme.PastelBluePrimary
@@ -58,25 +59,26 @@ fun EditProfileScreen(
         onResult = { uri -> viewModel.selectedImageUri = uri }
     )
 
+    // Dialogs: Discard, Confirm Save, Delete Account
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showSaveConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
-
     var showErrors by remember { mutableStateOf(false) }
 
-    // VALIDASI NAMA: HANYA HURUF, SPASI, TITIK
+    // Validasi
     val isNameValid = viewModel.fullName.isNotBlank() && viewModel.fullName.matches(Regex("^[a-zA-Z .]*$"))
-
-    // VALIDASI PASSWORD (JIKA DIISI)
     val pass = viewModel.password
     val hasLetter = pass.any { it.isLetter() }
     val hasDigit = pass.any { it.isDigit() }
     val isPasswordValid = pass.isEmpty() || (pass.length >= 8 && hasLetter && hasDigit)
+    val isFormValid = isNameValid && isPasswordValid && viewModel.email.isNotBlank()
 
-    fun onBackAttempt() {
-        if (viewModel.hasChanges()) showDiscardDialog = true else navigateBack()
-    }
+    // State Tombol
+    val isChanged = viewModel.hasChanges()
+
+    // Back Handler
+    fun onBackAttempt() { if (isChanged) showDiscardDialog = true else navigateBack() }
     BackHandler { onBackAttempt() }
 
     LaunchedEffect(uiState) {
@@ -117,6 +119,7 @@ fun EditProfileScreen(
             dismissButton = { OutlinedButton(onClick = { showDeleteAccountDialog = false }) { Text("Batal") } }
         )
     }
+    // DIALOG KONFIRMASI SIMPAN
     if (showSaveConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showSaveConfirmDialog = false },
@@ -127,20 +130,16 @@ fun EditProfileScreen(
         )
     }
 
-    // LAYOUT
+    // MAIN UI
     Box(modifier = Modifier.fillMaxSize().background(PastelBluePrimary)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.height(80.dp))
             Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp), color = Color.White) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp)
-                        .verticalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxSize().padding(24.dp).verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-
-                    // --- FOTO PROFIL ---
+                    // FOTO PROFIL
                     Box(contentAlignment = Alignment.BottomEnd) {
                         Box(modifier = Modifier.size(110.dp).clip(CircleShape).background(Color.LightGray.copy(alpha = 0.3f)).clickable { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, contentAlignment = Alignment.Center) {
                             if (viewModel.selectedImageUri != null) {
@@ -156,49 +155,15 @@ fun EditProfileScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Fields
+                    // INPUT FIELDS
                     OutlinedTextField(value = viewModel.role, onValueChange = {}, label = { Text("Status Akun") }, leadingIcon = { Icon(Icons.Default.Badge, null) }, modifier = Modifier.fillMaxWidth(), readOnly = true, enabled = false, shape = RoundedCornerShape(12.dp))
-
                     Spacer(modifier = Modifier.height(16.dp))
-
-                    // NAMA
-                    OutlinedTextField(
-                        value = viewModel.fullName,
-                        onValueChange = { viewModel.fullName = it },
-                        label = { Text("Nama Lengkap") },
-                        leadingIcon = { Icon(Icons.Default.Person, null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        isError = showErrors && !isNameValid
-                    )
-
+                    OutlinedTextField(value = viewModel.fullName, onValueChange = { viewModel.fullName = it }, label = { Text("Nama Lengkap") }, leadingIcon = { Icon(Icons.Default.Person, null) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), isError = showErrors && !isNameValid)
                     Spacer(modifier = Modifier.height(16.dp))
-
                     OutlinedTextField(value = viewModel.email, onValueChange = { viewModel.email = it }, label = { Text("Email") }, leadingIcon = { Icon(Icons.Default.Email, null) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
-
                     Spacer(modifier = Modifier.height(16.dp))
-
-                    // PASSWORD FIELD
-                    OutlinedTextField(
-                        value = viewModel.password,
-                        onValueChange = { viewModel.password = it },
-                        label = { Text("Password Baru (Opsional)") },
-                        leadingIcon = { Icon(Icons.Default.Lock, null) },
-                        modifier = Modifier.fillMaxWidth(),
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        shape = RoundedCornerShape(12.dp),
-                        isError = showErrors && !isPasswordValid,
-                        trailingIcon = { IconButton(onClick = { passwordVisible = !passwordVisible }) { Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, null) } }
-                    )
-
-                    // Helper Text
-                    if (showErrors && !isPasswordValid) {
-                        Text("Min. 8 karakter, huruf & angka", style = MaterialTheme.typography.labelSmall, color = SoftError, modifier = Modifier.align(Alignment.Start))
-                    } else {
-                        Text("Min. 8 karakter, huruf & angka (Jika diisi)", style = MaterialTheme.typography.labelSmall, color = Color.Gray, modifier = Modifier.align(Alignment.Start))
-                    }
-
+                    OutlinedTextField(value = viewModel.password, onValueChange = { viewModel.password = it }, label = { Text("Password Baru (Opsional)") }, leadingIcon = { Icon(Icons.Default.Lock, null) }, modifier = Modifier.fillMaxWidth(), visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), shape = RoundedCornerShape(12.dp), isError = showErrors && !isPasswordValid, trailingIcon = { IconButton(onClick = { passwordVisible = !passwordVisible }) { Icon(if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, null) } })
+                    if (showErrors && !isPasswordValid) Text("Min. 8 karakter, huruf & angka", style = MaterialTheme.typography.labelSmall, color = SoftError, modifier = Modifier.align(Alignment.Start)) else Text("Min. 8 karakter, huruf & angka (Jika diisi)", style = MaterialTheme.typography.labelSmall, color = Color.Gray, modifier = Modifier.align(Alignment.Start))
                     Spacer(modifier = Modifier.height(16.dp))
                     OutlinedTextField(value = viewModel.bio, onValueChange = { viewModel.bio = it }, label = { Text("Bio Singkat") }, modifier = Modifier.fillMaxWidth().height(120.dp), shape = RoundedCornerShape(12.dp))
 
@@ -220,38 +185,29 @@ fun EditProfileScreen(
                         },
                         modifier = Modifier.fillMaxWidth().height(50.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PastelBluePrimary),
-                        enabled = uiState !is EditProfileUiState.Loading
+                        colors = ButtonDefaults.buttonColors(containerColor = PastelBluePrimary, disabledContainerColor = Color.LightGray),
+                        // DISABLED JIKA TIDAK ADA PERUBAHAN
+                        enabled = uiState !is EditProfileUiState.Loading && isChanged
                     ) {
-                        if (uiState is EditProfileUiState.Loading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        } else {
-                            Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Simpan Perubahan", fontWeight = FontWeight.Bold)
-                        }
+                        if (uiState is EditProfileUiState.Loading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        else { Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(8.dp)); Text("Simpan Perubahan", fontWeight = FontWeight.Bold) }
+                    }
+
+                    if (!isChanged && uiState !is EditProfileUiState.Loading) {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Tidak ada perubahan", color = Color.Gray, fontSize = 12.sp)
                     }
 
                     Spacer(modifier = Modifier.height(24.dp))
                     Divider(color = Color.LightGray.copy(alpha = 0.5f))
 
-                    // --- TOMBOL HAPUS AKUN DI BAWAH DIVIDER ---
-                    TextButton(
-                        onClick = { showDeleteAccountDialog = true },
-                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                        colors = ButtonDefaults.textButtonColors(contentColor = SoftError)
-                    ) {
-                        Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Hapus Akun Permanen")
-                    }
-
+                    // DELETE ACCOUNT
+                    TextButton(onClick = { showDeleteAccountDialog = true }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp), colors = ButtonDefaults.textButtonColors(contentColor = SoftError)) { Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Hapus Akun Permanen") }
                     Spacer(modifier = Modifier.height(50.dp))
                 }
             }
         }
 
-        // Header
         Row(modifier = Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { onBackAttempt() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
             Text("Edit Profil", style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)

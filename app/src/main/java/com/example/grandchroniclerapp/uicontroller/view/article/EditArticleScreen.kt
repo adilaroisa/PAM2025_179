@@ -1,12 +1,10 @@
 package com.example.grandchroniclerapp.uicontroller.view.article
 
-import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
@@ -58,6 +56,7 @@ fun EditArticleScreen(
     val scrollState = rememberScrollState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // DIALOGS: Discard, Delete Image, dan KONFIRMASI SIMPAN
     var showDiscardDialog by remember { mutableStateOf(false) }
     var showDraftConfirmDialog by remember { mutableStateOf(false) }
     var showPublishConfirmDialog by remember { mutableStateOf(false) }
@@ -67,13 +66,17 @@ fun EditArticleScreen(
 
     val multipleImagePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { viewModel.updateImages(it) }
 
-    fun onBackAttempt() { if (viewModel.hasChanges()) showDiscardDialog = true else navigateBack() }
+    // Logic Tombol & Validasi
+    val isChanged = viewModel.hasChanges()
+    val isPublishValid = viewModel.title.isNotBlank() && viewModel.content.isNotBlank() && viewModel.selectedCategory != null
+
+    // Logic Back
+    val onBackAttempt = { if (isChanged) showDiscardDialog = true else navigateBack() }
     BackHandler { onBackAttempt() }
 
     LaunchedEffect(Unit) {
         viewModel.snackbarEvent.collectLatest { message -> snackbarHostState.showSnackbar(message) }
     }
-
     LaunchedEffect(uiState) {
         if (uiState is UploadUiState.Success) {
             delay(1000)
@@ -81,7 +84,7 @@ fun EditArticleScreen(
         }
     }
 
-    // --- VALIDASI ---
+    // --- ALERT DIALOGS ---
     if (oldImageToDelete != null) {
         AlertDialog(onDismissRequest = { oldImageToDelete = null }, title = { Text("Hapus Gambar?") }, confirmButton = { Button(onClick = { viewModel.deleteOldImage(oldImageToDelete!!); oldImageToDelete = null }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) { Text("Hapus") } }, dismissButton = { OutlinedButton(onClick = { oldImageToDelete = null }) { Text("Batal") } })
     }
@@ -89,105 +92,65 @@ fun EditArticleScreen(
         AlertDialog(onDismissRequest = { newImageToDelete = null }, title = { Text("Hapus Upload?") }, confirmButton = { Button(onClick = { viewModel.removeNewImage(newImageToDelete!!); newImageToDelete = null }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) { Text("Hapus") } }, dismissButton = { OutlinedButton(onClick = { newImageToDelete = null }) { Text("Batal") } })
     }
     if (showDiscardDialog) {
-        AlertDialog(onDismissRequest = { showDiscardDialog = false }, title = { Text("Keluar?", color = SoftError) }, text = { Text("Perubahan belum disimpan.") }, confirmButton = { Button(onClick = { showDiscardDialog = false; navigateBack() }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) { Text("Keluar") } }, dismissButton = { OutlinedButton(onClick = { showDiscardDialog = false }) { Text("Lanjut") } })
+        AlertDialog(onDismissRequest = { showDiscardDialog = false }, title = { Text("Keluar?", color = SoftError) }, text = { Text("Perubahan belum disimpan.") }, confirmButton = { Button(onClick = { showDiscardDialog = false; navigateBack() }, colors = ButtonDefaults.buttonColors(containerColor = SoftError)) { Text("Keluar") } }, dismissButton = { OutlinedButton(onClick = { showDiscardDialog = false }) { Text("Batal") } })
     }
+    // Dialog Konfirmasi Publish
     if (showPublishConfirmDialog) {
-        AlertDialog(onDismissRequest = { showPublishConfirmDialog = false }, title = { Text("Update Artikel?") }, text = { Text("Artikel akan diperbarui sesuai perubahan terbaru.") }, confirmButton = { Button(onClick = { showPublishConfirmDialog = false; viewModel.submitUpdate(context, articleId, "Published") }) { Text("Update") } }, dismissButton = { TextButton(onClick = { showPublishConfirmDialog = false }) { Text("Batal") } })
+        AlertDialog(onDismissRequest = { showPublishConfirmDialog = false }, title = { Text("Update Artikel?") }, text = { Text("Artikel akan diperbarui sesuai perubahan terbaru.") }, confirmButton = { Button(onClick = { showPublishConfirmDialog = false; viewModel.submitUpdate(context, articleId, "Published") }, colors = ButtonDefaults.buttonColors(containerColor = PastelBluePrimary)) { Text("Update") } }, dismissButton = { TextButton(onClick = { showPublishConfirmDialog = false }) { Text("Batal") } })
     }
+    // Dialog Konfirmasi Draft
     if (showDraftConfirmDialog) {
         AlertDialog(onDismissRequest = { showDraftConfirmDialog = false }, title = { Text("Simpan Draf?") }, text = { Text("Simpan perubahan sebagai draf.") }, confirmButton = { Button(onClick = { showDraftConfirmDialog = false; viewModel.submitUpdate(context, articleId, "Draft") }) { Text("Simpan") } }, dismissButton = { TextButton(onClick = { showDraftConfirmDialog = false }) { Text("Batal") } })
     }
 
-    // MAIN UI
     Box(modifier = Modifier.fillMaxSize().background(PastelBluePrimary)) {
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.height(80.dp))
             Surface(modifier = Modifier.fillMaxSize(), shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp), color = Color.White) {
                 Column(modifier = Modifier.fillMaxSize().padding(20.dp).verticalScroll(scrollState)) {
 
-                    // HEADER BAGIAN FOTO
+                    // HEADER FOTO
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                         Text("Kelola Foto", fontWeight = FontWeight.Bold, color = PastelBluePrimary, style = MaterialTheme.typography.titleMedium)
                         Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { multipleImagePicker.launch("image/*") }) {
-                            Icon(Icons.Default.AddPhotoAlternate, null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Tambah Baru")
-                        }
+                        TextButton(onClick = { multipleImagePicker.launch("image/*") }) { Icon(Icons.Default.AddPhotoAlternate, null, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text("Tambah Baru") }
                     }
                     Spacer(Modifier.height(8.dp))
 
-                    // 1. GAMBAR LAMA
+                    // LIST GAMBAR LAMA
                     if (viewModel.oldImages.isNotEmpty()) {
-                        Text("Foto Saat Ini:", fontSize = 12.sp, color = Color.Gray)
-                        Spacer(Modifier.height(8.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(viewModel.oldImages.size) { index ->
                                 val item = viewModel.oldImages[index]
                                 val finalUrl = if (item.url.startsWith("http")) item.url else "http://10.0.2.2:3000/uploads/${item.url}"
-
-                                Card(
-                                    modifier = Modifier.width(200.dp).wrapContentHeight(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color.White)
-                                ) {
+                                Card(modifier = Modifier.width(200.dp).wrapContentHeight(), shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(4.dp), colors = CardDefaults.cardColors(Color.White)) {
                                     Column {
                                         Box(modifier = Modifier.height(130.dp).fillMaxWidth()) {
                                             AsyncImage(model = finalUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                            IconButton(
-                                                onClick = { oldImageToDelete = item },
-                                                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).background(Color.White.copy(0.7f), CircleShape).size(28.dp)
-                                            ) { Icon(Icons.Default.Delete, null, tint = SoftError, modifier = Modifier.size(16.dp)) }
+                                            IconButton(onClick = { oldImageToDelete = item }, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).background(Color.White.copy(0.7f), CircleShape).size(28.dp)) { Icon(Icons.Default.Delete, null, tint = SoftError, modifier = Modifier.size(16.dp)) }
                                         }
-                                        OutlinedTextField(
-                                            value = item.caption,
-                                            onValueChange = { viewModel.updateOldCaption(index, it) },
-                                            placeholder = { Text("Caption...") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
-                                            minLines = 2, maxLines = 3,
-                                            colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.Transparent, focusedBorderColor = PastelBluePrimary.copy(0.5f), unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
-                                        )
+                                        OutlinedTextField(value = item.caption, onValueChange = { viewModel.updateOldCaption(index, it) }, placeholder = { Text("Caption...") }, modifier = Modifier.fillMaxWidth(), textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp), minLines = 2, maxLines = 3, colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.Transparent, focusedBorderColor = PastelBluePrimary.copy(0.5f), unfocusedContainerColor = Color.White, focusedContainerColor = Color.White))
                                     }
                                 }
                             }
                         }
                         Spacer(Modifier.height(24.dp))
-                    } else {
-                        Text("- Tidak ada foto lama -", fontSize = 12.sp, color = Color.LightGray, modifier = Modifier.padding(bottom = 16.dp))
                     }
 
-                    // 2. GAMBAR BARU
+                    // LIST GAMBAR BARU
                     if (viewModel.newImages.isNotEmpty()) {
                         Text("Upload Baru:", fontSize = 12.sp, color = PastelBluePrimary, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             items(viewModel.newImages.size) { index ->
                                 val item = viewModel.newImages[index]
-                                Card(
-                                    modifier = Modifier.width(200.dp).wrapContentHeight(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F7FF)) // Sedikit biru biar beda
-                                ) {
+                                Card(modifier = Modifier.width(200.dp).wrapContentHeight(), shape = RoundedCornerShape(12.dp), elevation = CardDefaults.cardElevation(4.dp), colors = CardDefaults.cardColors(Color(0xFFF0F7FF))) {
                                     Column {
                                         Box(modifier = Modifier.height(130.dp).fillMaxWidth()) {
                                             AsyncImage(model = item.uri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                                            IconButton(
-                                                onClick = { newImageToDelete = item },
-                                                modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).background(Color.White.copy(0.7f), CircleShape).size(28.dp)
-                                            ) { Icon(Icons.Default.Close, null, tint = SoftError, modifier = Modifier.size(16.dp)) }
+                                            IconButton(onClick = { newImageToDelete = item }, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).background(Color.White.copy(0.7f), CircleShape).size(28.dp)) { Icon(Icons.Default.Close, null, tint = SoftError, modifier = Modifier.size(16.dp)) }
                                         }
-                                        OutlinedTextField(
-                                            value = item.caption,
-                                            onValueChange = { viewModel.updateNewCaption(index, it) },
-                                            placeholder = { Text("Caption baru...") },
-                                            modifier = Modifier.fillMaxWidth(),
-                                            textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
-                                            minLines = 2, maxLines = 3,
-                                            colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.Transparent, focusedBorderColor = PastelBluePrimary.copy(0.5f), unfocusedContainerColor = Color.White, focusedContainerColor = Color.White)
-                                        )
+                                        OutlinedTextField(value = item.caption, onValueChange = { viewModel.updateNewCaption(index, it) }, placeholder = { Text("Caption baru...") }, modifier = Modifier.fillMaxWidth(), textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp), minLines = 2, maxLines = 3, colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = Color.Transparent, focusedBorderColor = PastelBluePrimary.copy(0.5f), unfocusedContainerColor = Color.White, focusedContainerColor = Color.White))
                                     }
                                 }
                             }
@@ -195,80 +158,65 @@ fun EditArticleScreen(
                         Spacer(Modifier.height(24.dp))
                     }
 
-                    // FORM INPUT DATA
-                    OutlinedTextField(
-                        value = viewModel.title, onValueChange = { viewModel.updateTitle(it) },
-                        label = { Text("Judul") }, modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PastelBluePrimary, unfocusedContainerColor = Color(0xFFFAFAFA)),
-                        isError = viewModel.title.isBlank() && uiState is UploadUiState.Error
-                    )
+                    // FORM INPUT
+                    OutlinedTextField(value = viewModel.title, onValueChange = { viewModel.updateTitle(it) }, label = { Text("Judul") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PastelBluePrimary, unfocusedContainerColor = Color(0xFFFAFAFA)))
                     Spacer(Modifier.height(16.dp))
-
                     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                        OutlinedTextField(
-                            value = viewModel.selectedCategory?.category_name ?: "Pilih Kategori",
-                            onValueChange = {}, readOnly = true, label = { Text("Kategori") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PastelBluePrimary, unfocusedContainerColor = Color(0xFFFAFAFA)),
-                            isError = viewModel.selectedCategory == null && uiState is UploadUiState.Error
-                        )
-                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color.White)) {
-                            viewModel.categories.forEach { category -> DropdownMenuItem(text = { Text(category.category_name) }, onClick = { viewModel.updateCategory(category); expanded = false }) }
-                        }
+                        OutlinedTextField(value = viewModel.selectedCategory?.category_name ?: "Pilih Kategori", onValueChange = {}, readOnly = true, label = { Text("Kategori") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PastelBluePrimary, unfocusedContainerColor = Color(0xFFFAFAFA)))
+                        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.background(Color.White)) { viewModel.categories.forEach { category -> DropdownMenuItem(text = { Text(category.category_name) }, onClick = { viewModel.updateCategory(category); expanded = false }) } }
                     }
                     Spacer(Modifier.height(16.dp))
-
-                    OutlinedTextField(
-                        value = viewModel.tags, onValueChange = { viewModel.updateTags(it) },
-                        label = { Text("Tags") }, modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PastelBluePrimary, unfocusedContainerColor = Color(0xFFFAFAFA))
-                    )
+                    OutlinedTextField(value = viewModel.tags, onValueChange = { viewModel.updateTags(it) }, label = { Text("Tags") }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PastelBluePrimary, unfocusedContainerColor = Color(0xFFFAFAFA)))
                     Spacer(Modifier.height(16.dp))
-
-                    OutlinedTextField(
-                        value = viewModel.content, onValueChange = { viewModel.updateContent(it) },
-                        label = { Text("Isi Artikel") }, modifier = Modifier.fillMaxWidth().height(300.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PastelBluePrimary, unfocusedContainerColor = Color(0xFFFAFAFA)),
-                        isError = viewModel.content.isBlank() && uiState is UploadUiState.Error
-                    )
+                    OutlinedTextField(value = viewModel.content, onValueChange = { viewModel.updateContent(it) }, label = { Text("Isi Artikel") }, modifier = Modifier.fillMaxWidth().height(300.dp), shape = RoundedCornerShape(12.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = PastelBluePrimary, unfocusedContainerColor = Color(0xFFFAFAFA)))
                     Spacer(Modifier.height(24.dp))
 
-                    // TOMBOL AKSI
+                    // --- TOMBOL AKSI ---
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        // Tombol Draf
                         OutlinedButton(
-                            onClick = { if (viewModel.title.isNotBlank()) showDraftConfirmDialog = true else viewModel.submitUpdate(context, articleId, "Draft") },
+                            onClick = { showDraftConfirmDialog = true }, // Muncul Dialog
                             modifier = Modifier.weight(1f).height(50.dp),
                             shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, PastelBluePrimary),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = PastelBluePrimary),
-                            enabled = uiState !is UploadUiState.Loading
+                            border = BorderStroke(1.dp, if(isChanged) PastelBluePrimary else Color.LightGray),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = if(isChanged) PastelBluePrimary else Color.LightGray),
+                            enabled = uiState !is UploadUiState.Loading && isChanged
                         ) { Text("Simpan Draf") }
 
+                        // Tombol Update
                         Button(
-                            onClick = { if (viewModel.title.isNotBlank() && viewModel.content.isNotBlank() && viewModel.selectedCategory != null) showPublishConfirmDialog = true else viewModel.submitUpdate(context, articleId, "Published") },
+                            onClick = { showPublishConfirmDialog = true }, // Muncul Dialog
                             modifier = Modifier.weight(1f).height(50.dp),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PastelBluePrimary),
-                            enabled = uiState !is UploadUiState.Loading
-                        ) { if (uiState is UploadUiState.Loading) CircularProgressIndicator(color = Color.White) else Text("Update") }
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PastelBluePrimary,
+                                disabledContainerColor = Color.LightGray
+                            ),
+                            enabled = uiState !is UploadUiState.Loading && isChanged && isPublishValid
+                        ) {
+                            if (uiState is UploadUiState.Loading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                            else Text("Update")
+                        }
                     }
+
+                    if (!isChanged && uiState !is UploadUiState.Loading) {
+                        Spacer(Modifier.height(8.dp))
+                        Text("Tidak ada perubahan", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                    }
+
                     Spacer(modifier = Modifier.height(50.dp))
                 }
             }
         }
 
-        // HEADER & SNACKBAR
+        // Header & Snackbar
         Row(Modifier.fillMaxWidth().height(80.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { onBackAttempt() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
             Text("Edit Artikel", color = Color.White, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         }
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             SnackbarHost(hostState = snackbarHostState) { data ->
-                val isSuccess = data.visuals.message.contains("Berhasil", true) || data.visuals.message.contains("Update", true)
+                val isSuccess = data.visuals.message.contains("Berhasil", true)
                 val bgColor = if (isSuccess) Brush.horizontalGradient(listOf(PastelBluePrimary, PastelPinkSecondary)) else Brush.linearGradient(listOf(SoftError, SoftError))
                 Box(modifier = Modifier.padding(16.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bgColor).padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
